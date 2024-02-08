@@ -24,6 +24,9 @@ let lastRoundTimeAtPause;
 let isQuestionTimerPaused;
 let isRoundTimerPaused;
 
+//Vars for keypress dectction
+const pressedKeys = {};
+
 //Function to increment the score for a given team
 let incrementScore = (team) => {
   if (team === "teamA") {
@@ -195,68 +198,103 @@ function editTeamNames() {
   document.querySelector('#rightTeamName').textContent = rightTeamName ? rightTeamName : DEFAULT_RIGHT_TEAM_NAME;
 }
 
+function isKeyPressed(keyCode) {
+  return pressedKeys[keyCode] === true;
+}
+
+document.addEventListener('keydown', (e) => {
+  pressedKeys[e.keyCode] = true;
+});
+
+document.addEventListener('keyup', (e) => {
+  delete pressedKeys[e.keyCode];
+});
+
 document.onkeyup = function () {
+  if (!isKeyPressed(65)) {
+    document.querySelector('#leftTeamBox').style.backgroundColor = "";
+  }
+  if (!isKeyPressed(68)) {
+    document.querySelector('#rightTeamBox').style.backgroundColor = "";
+  }
+}
+
+document.onkeydown = function () {
   var e = e || window.event; // for IE to cover IEs window event-object
-  
-  if (e.which == 65) { // 'a' key
-    console.log("Incrementing the LEFT team's score and resetting the timer.");
+
+  if (isKeyPressed(65)) { // 'a' key is down (LEFT)
+    document.querySelector('#leftTeamBox').style.backgroundColor = "#9D2235";
+  }
+  if (isKeyPressed(68)) { // 'd' key is down (RIGHT)
+    document.querySelector('#rightTeamBox').style.backgroundColor = "#9D2235";
+  }
+  if (isKeyPressed(65) && isKeyPressed(87)) { // 'a' + 'w' keys (LEFT and UP)
+    console.log("Incrementing LEFT team's score and resetting the timer.");
     incrementScore('teamA');
-    resetQuestionTimer();
   }
-  if (e.which == 83) { // 's' key
-    console.log("Incrementing the RIGHT team's score and resetting the timer.");
+  if (isKeyPressed(68) && isKeyPressed(87)) { // 'd' + 'w' keys (RIGHT and UP)
+    console.log("Incrementing RIGHT team's score and resetting the timer.");
     incrementScore('teamB');
-    resetQuestionTimer();
   }
-  if (e.which == 90) { // 'z' key
-    console.log("Decrementing the LEFT team's score.");
+  if (isKeyPressed(65) && isKeyPressed(83)) { // 'a' + 'w' keys (LEFT and DOWN)
+    console.log("Decrementing LEFT team's score.");
     decrementScore('teamA');
   }
-  if (e.which == 88) { // 'x' key
-    console.log("Decrementing the RIGHT team's score.");
+  if (isKeyPressed(68) && isKeyPressed(83)) { // 'a' + 'w' keys (RIGHT and DOWN)
+    console.log("Decrementing RIGHT team's score.");
     decrementScore('teamB');
   }
-  if (!isQuestionTimerPaused) {
-    if (e.which == 37) { // 'arrow left' key
-      console.log("Follow up for the LEFT team.");
-      lastQuestionTimer = startLongTimer(true, lastQuestionTimer);
+  if (!isRoundTimerPaused) {
+
+    // Question Control Keys
+    if (!isQuestionTimerPaused) {
+      if (e.which == 37) { // 'arrow left' key
+        console.log("Follow up for the LEFT team.");
+        lastQuestionTimer = startLongTimer(true, lastQuestionTimer);
+        return false;
+      }
+      if (e.which == 39) { // 'arrow right' key
+        console.log("Follow up for the RIGHT team.");
+        lastQuestionTimer = startLongTimer(false, lastQuestionTimer);
+        return false;
+      }
+      if (e.which == 38) { // 'arrow up' key
+        console.log("Toss up!");
+        lastQuestionTimer = startShortTimer(lastQuestionTimer);
+        return false;
+      }
+      if (e.which == 40) { // 'arrow down' key
+        console.log("Resetting the question timer.");
+        resetQuestionTimer();
+        return false;
+      }
+    }
+    if (e.which == 32) { // 'spacebar' key
+      console.log("Pause/unpause requested for question timer.");
+      pauseQuestionTimer();
       return false;
     }
-    if (e.which == 39) { // 'arrow right' key
-      console.log("Follow up for the RIGHT team.");
-      lastQuestionTimer = startLongTimer(false, lastQuestionTimer);
-      return false;
+
+    // Claim Indicators Control Keys
+    if (e.which == 219) { // '[' key - set LEFT team indicator on
+      console.log("Manually switching on LEFT claim indicator.")
+      document.querySelector('#bigTimerLeftMarker').style.background = '#9D2235'; 
     }
-    if (e.which == 38) { // 'arrow up' key
-      console.log("Toss up!");
-      lastQuestionTimer = startShortTimer(lastQuestionTimer);
-      return false;
+    if (e.which == 221) { // ']' key - set RIGHT team indicator on
+      console.log("Manually switching on RIGHT claim indicator.")
+      document.querySelector('#bigTimerRightMarker').style.background = '#9D2235';
     }
-    if (e.which == 40) { // 'arrow down' key
-      console.log("Resetting the question timer.");
-      resetQuestionTimer();
-      return false;
+    if (e.which == 220) { // '\' key - reset team indicators
+      console.log("Manually switching off BOTH claim markers.")
+      document.querySelector('#bigTimerRightMarker').style.background = 'white';
+      document.querySelector('#bigTimerLeftMarker').style.background = 'white';
     }
-  }
-  if (e.which == 32) { // 'spacebar' key
-    console.log("Pause/unpause requested for question timer.");
-    pauseQuestionTimer();
-    return false;
   }
   if (e.which == 27) { // 'ESC' key
     console.log("Pause/unpause requested for round timer.");
+    if (!isQuestionTimerPaused) pauseQuestionTimer();
     pauseRoundTimer();
     return false;
-  }
-  if (e.which == 219) { // '[' key - set LEFT team indicator on
-    document.querySelector('#bigTimerLeftMarker').style.background = '#9D2235'; 
-  }
-  if (e.which == 221) { // ']' key - set RIGHT team indicator on
-    document.querySelector('#bigTimerRightMarker').style.background = '#9D2235';
-  }
-  if (e.which == 220) { // '\' key - reset team indicators
-    document.querySelector('#bigTimerRightMarker').style.background = 'white';
-    document.querySelector('#bigTimerLeftMarker').style.background = 'white';
   }
 }
 

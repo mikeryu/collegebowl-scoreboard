@@ -18,6 +18,20 @@ Enter the number of minutes in integer format (e.g., 15), or simply press enter 
 
 **The scoreboard will initialize in a PAUSED state.** Press the `ESC` key to unpause the round timer to begin the round.
 
+## Pause Functionalities
+
+The scoreboard allows pausing both the round timer and the question timer.
+
+ - Pausing the round timer automatically pauses the question timer as well.
+   - While the round timer is paused, all question and claim indicator controls are disabled.
+   - Unpausing the round timer does not automatically unpause the question timer; it must be manually unpaused.
+
+ - Pausing the question timer does not automatically pause the round timer, but it can still be manually paused.
+   - While the question timer is paused, only the question controls are diabled.
+   - Claim indicator controls remain enabled while the question timer is paused.
+
+ - Score controls remain active at all times regardless of the pause states.
+
 ---
 
 ## Keyboard Commands
@@ -40,14 +54,16 @@ Note that the question control via arrow keys are *not* available while the ques
 
 ### Scoring
 
-- `a`: increment the score for the LEFT team by 1 *and* reset the timer.
-- `s`: increment the score for the RIGHT team by 1 *and* reset the timer.
-- `z`: decrement the score for the LEFT team (use for correcting mistakes).
-- `x`: decrement the score for the RIGHT team (use for correcting mistakes).
+Scoring now requires two-key combination based on the common gaming movement keys (WASD).
 
-### Turn (Left/Right) Indicator Controls  
+- Hold `a`: "select" the LEFT team as the team to modify the score for (indicated by score box color change).
+- Hold `d`: "select" the RIGHT team as the team to modify the score for (indicated by score box color change).
+- `w`: increment the score of the selected team(s) by 1.
+- `s`: decrement the score of the selected team(s) by 1.
 
-These controls are available to you as an additional control in case the "claim" of the teams over questions switches and you wish to indicate the switch manually.
+### Claim (Left/Right) Indicator Controls  
+
+These controls are available to you as additional controls in case the "claim" of the teams over questions switches and you wish to indicate the switch manually.
 
 - `[`: enable the LEFT team indicator (does nothing if already enabled).
 - `]`: enable the RIGHT team indicator (does nothing if already enabled).
@@ -57,7 +73,7 @@ These controls are available to you as an additional control in case the "claim"
 
 ## Advanced Config
 
-First lines of `script.js` contains a few default values you can edit. To edit the key bindings for keyboard commands, edit the lines 198- 261 of the script file. You can find key codes to use using [this web application](https://www.toptal.com/developers/keycode).
+First lines of `script.js` contains a few default values you can edit. To edit the key bindings for keyboard commands, edit the lines 200-300 of the script file. You can find key codes to use using [this web application](https://www.toptal.com/developers/keycode).
 
 ---
 
