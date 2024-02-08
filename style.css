@@ -1,0 +1,137 @@
+* {
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif;
+}
+body {
+  height: 100vh;
+  background: linear-gradient(#63666A 50%, #9D2235 50%);
+}
+.bigtimer {
+  background-color: #ffffff;
+  width: min(90%, 40em);
+  position: absolute;
+  transform: translate(-50%, -50%);
+  left: 50%;
+  top: 30%;
+  padding: 1em;
+  border-radius: 0.5em;
+  display: grid;
+  grid-template-columns: 1fr 3fr 1fr;
+  align-items: center;
+  text-align: center;
+}
+.bigtimer h1 {
+  font-family: "Space Mono", monospace;
+  font-size: 5em;  
+  color: #9D2235;
+}
+.bigtimer h2 {
+  background-color: #ffffff;
+  color: #ffffff;
+  border: none;
+  outline: none;
+  padding: 0.5em 0.5em;
+  border-radius: 0.3em;
+  font-weight: 600;
+  font-size: 1.3em;
+}
+.smalltimer {
+  background-color: #353638;
+  width: min(90%, 40em);
+  position: absolute;
+  transform: translate(-50%, -50%);
+  left: 50%;
+  top: 15%;
+  padding: 1em;
+  border-radius: 0.5em;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  text-align: center;
+}
+.smalltimer h1 {
+  font-family: "Space Mono", monospace;
+  font-size: 2em;  
+  color: #ffffff;
+}
+.smalltimer h2 {
+  font-size: 1.5em;  
+  color: #63666A
+}
+.scoreboard {
+  background-color: #1e1e21;
+  width: min(90%, 40em);
+  position: absolute;
+  transform: translate(-50%, -50%);
+  left: 50%;
+  top: 60%;
+  padding: 3em;
+  border-radius: 0.5em;
+  display: grid;
+  grid-template-columns: 2fr 1fr 2fr;
+  align-items: center;
+}
+.team {
+  text-align: center;
+  background-color: #353638;
+  padding: 2em;
+  border-radius: 0.5em;
+}
+button {
+  cursor: pointer;
+}
+#reset-btn {
+  background-color: transparent;
+  border: 3px solid #ceb888;
+  color: #ceb888;
+  height: 5em;
+  width: 5em;
+  margin: auto;
+  border-radius: 0.5em;
+}
+.team h2 {
+  color: #ceb888;
+}
+.team p {
+  color: #ffffff;
+  font-family: "Space Mono", monospace;
+  font-size: 6em;
+}
+.btn-container {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+}
+.team button {
+  background-color: #ceb888;
+  border: none;
+  outline: none;
+  padding: 0.3em 0.7em;
+  border-radius: 0.3em;
+  font-weight: 600;
+  font-size: 1.3em;
+}
+.btn-box {
+  width: min(90%, 40em);
+  position: absolute;
+  transform: translate(-50%, -50%);
+  left: 50%;
+  top: 95%;
+  padding: 0.5em;
+  border-radius: 0.5em;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: center;
+  text-align: center;
+}
+.btn-box button {
+  background-color: #9D2235;
+  padding: 0.3em 0.7em;
+  border-radius: 0.4em;
+  font-size: 1em;
+  color: #ffffff;
+  align-items: center;
+}
+
