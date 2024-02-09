@@ -9,7 +9,7 @@ body {
   background: linear-gradient(#63666A 50%, #9D2235 50%);
 }
 .bigtimer {
-  background-color: #ffffff;
+  background-color: #FFFFFF;
   width: min(90%, 40em);
   position: absolute;
   transform: translate(-50%, -50%);
@@ -28,8 +28,8 @@ body {
   color: #9D2235;
 }
 .bigtimer h2 {
-  background-color: #ffffff;
-  color: #ffffff;
+  background-color: #FFFFFF;
+  color: #FFFFFF;
   border: none;
   outline: none;
   padding: 0.5em 0.5em;
@@ -54,14 +54,14 @@ body {
 .smalltimer h1 {
   font-family: "Space Mono", monospace;
   font-size: 2em;  
-  color: #ffffff;
+  color: #FFFFFF;
 }
 .smalltimer h2 {
   font-size: 1.5em;  
   color: #63666A
 }
 .scoreboard {
-  background-color: #ceb888;
+  background-color: #CEB888;
   width: min(90%, 80em);
   position: absolute;
   transform: translate(-50%, -50%);
@@ -73,7 +73,7 @@ body {
   grid-template-columns: 5fr 1fr 5fr;
   align-items: center;
 }
-.teaml {
+.team-l {
   text-align: center;
   background-color: #353638;
   padding: 1em;
@@ -81,7 +81,7 @@ body {
   display: grid;
   grid-template-columns: 6fr 1fr 2fr;
 }
-.teamr {
+.team-r {
   text-align: center;
   background-color: #353638;
   padding: 1em;
@@ -92,24 +92,13 @@ body {
 button {
   cursor: pointer;
 }
-.teaml h2 {
-  color: #ceb888;
+.team-name {
+  color: #CEB888;
   font-size: 7vh;
   align-self: center;
 }
-.teaml p {
-  color: #ffffff;
-  font-family: "Space Mono", monospace;
-  font-size: 15vh;
-  align-self: center;
-}
-.teamr h2 {
-  color: #ceb888;
-  font-size: 7vh;
-  align-self: center;
-}
-.teamr p {
-  color: #ffffff;
+.team-score {
+  color: #FFFFFF;
   font-family: "Space Mono", monospace;
   font-size: 15vh;
   align-self: center;
@@ -120,7 +109,7 @@ button {
   justify-content: space-between;
 }
 .team button {
-  background-color: #ceb888;
+  background-color: #CEB888;
   border: none;
   outline: none;
   padding: 0.3em 0.7em;
@@ -146,7 +135,7 @@ button {
   padding: 0.3em 0.7em;
   border-radius: 0.4em;
   font-size: 1em;
-  color: #ffffff;
+  color: #FFFFFF;
   align-items: center;
 }
 
