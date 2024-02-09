@@ -14,7 +14,7 @@ body {
   position: absolute;
   transform: translate(-50%, -50%);
   left: 50%;
-  top: 30%;
+  top: 70%;
   padding: 1em;
   border-radius: 0.5em;
   display: grid;
@@ -43,11 +43,11 @@ body {
   position: absolute;
   transform: translate(-50%, -50%);
   left: 50%;
-  top: 15%;
+  top: 50%;
   padding: 1em;
   border-radius: 0.5em;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   align-items: center;
   text-align: center;
 }
@@ -61,43 +61,58 @@ body {
   color: #63666A
 }
 .scoreboard {
-  background-color: #1e1e21;
-  width: min(90%, 40em);
+  background-color: #ceb888;
+  width: min(90%, 80em);
   position: absolute;
   transform: translate(-50%, -50%);
   left: 50%;
-  top: 60%;
-  padding: 3em;
-  border-radius: 0.5em;
-  display: grid;
-  grid-template-columns: 2fr 1fr 2fr;
-  align-items: center;
-}
-.team {
-  text-align: center;
-  background-color: #353638;
+  top: 22%;
   padding: 2em;
   border-radius: 0.5em;
+  display: grid;
+  grid-template-columns: 5fr 1fr 5fr;
+  align-items: center;
+}
+.teaml {
+  text-align: center;
+  background-color: #353638;
+  padding: 1em;
+  border-radius: 0.5em;
+  display: grid;
+  grid-template-columns: 6fr 1fr 2fr;
+}
+.teamr {
+  text-align: center;
+  background-color: #353638;
+  padding: 1em;
+  border-radius: 0.5em;
+  display: grid;
+  grid-template-columns: 2fr 1fr 6fr;
 }
 button {
   cursor: pointer;
 }
-#reset-btn {
-  background-color: transparent;
-  border: 3px solid #ceb888;
+.teaml h2 {
   color: #ceb888;
-  height: 5em;
-  width: 5em;
-  margin: auto;
-  border-radius: 0.5em;
+  font-size: 7vh;
+  align-self: center;
 }
-.team h2 {
-  color: #ceb888;
-}
-.team p {
+.teaml p {
   color: #ffffff;
   font-family: "Space Mono", monospace;
-  font-size: 6em;
+  font-size: 15vh;
+  align-self: center;
+}
+.teamr h2 {
+  color: #ceb888;
+  font-size: 7vh;
+  align-self: center;
+}
+.teamr p {
+  color: #ffffff;
+  font-family: "Space Mono", monospace;
+  font-size: 15vh;
+  align-self: center;
 }
 .btn-container {
   width: 100%;

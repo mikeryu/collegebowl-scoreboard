@@ -16,37 +16,20 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div class="smalltimer">
-      <h2>ROUND TIMER</h2>
-      <h1 id=smallTimerCountdown>--:--</h1>
-    </div>
-
-    <div class="bigtimer">
-      <h2 id="bigTimerLeftMarker">L</h2>
-      <h1 id=bigTimerCountdown>--:--</h1>
-      <h2 id="bigTimerRightMarker">R</h2>
-    </div>
-
     <div class="scoreboard">
-      <div class="team" id="leftTeamBox">
+      <div class="teaml" id="leftTeamBox">
         <h2 id="leftTeamName">LEFT<br>TEAM</h2>
+        <div></div>
         <p id="teamAScore">0</p>
-        <!-- <div class="btn-container">
-          <button onclick="incrementScore('teamA')">+</button>
-          <button onclick="decrementScore('teamA')">-</button>
-        </div> -->
       </div>
 
       <div></div>
-      <!-- <button id="reset-btn" onclick="resetScores()">Reset</button> -->
 
-      <div class="team" id="rightTeamBox">
-        <h2 id="rightTeamName">RIGHT<br>TEAM</h2>
+
+      <div class="teamr" id="rightTeamBox">
         <p id="teamBScore">0</p>
-        <!-- <div class="btn-container">
-          <button onclick="incrementScore('teamB')">+</button>
-          <button onclick="decrementScore('teamB')">-</button>
-        </div> -->
+        <div></div>
+        <h2 id="rightTeamName">RIGHT<br>TEAM</h2>
       </div>
     </div>
 
@@ -54,6 +37,18 @@
       <div></div>
       <button onclick="editTeamNames()">EDIT TEAM NAMES</button>
       <div></div>
+    </div>
+
+    <div class="smalltimer">
+      <h2>ROUND</h2>
+      <h1 id=smallTimerCountdown>--:--</h1>
+      <h2>TIMER</h2>
+    </div>
+
+    <div class="bigtimer">
+      <h2 id="bigTimerLeftMarker">L</h2>
+      <h1 id=bigTimerCountdown>--:--</h1>
+      <h2 id="bigTimerRightMarker">R</h2>
     </div>
     <!-- Script-->
     <script src="script.js"></script>

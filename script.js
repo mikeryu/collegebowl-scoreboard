@@ -1,8 +1,16 @@
-//Config
-let DEFAULT_LEFT_TEAM_NAME = "LEFT<br>TEAM";
-let DEFAULT_RIGHT_TEAM_NAME = "RIGHT<br>TEAM";
+// Default Timer Length Config (desired secondds - 1)
 let LONG_TIMER_SECS = 90 - 1;
 let SHORT_TIMER_SECS = 20 - 1;
+
+// Default Team Name Config
+let DEFAULT_LEFT_TEAM_NAME = "LEFT<br>TEAM";
+let DEFAULT_RIGHT_TEAM_NAME = "RIGHT<br>TEAM";
+let MAX_TEAM_NAME_CHAR_LEN = 20;
+
+// Default Length of a Game Config
+let DEFAULT_ROUND_MINS = 15;
+
+/* Scoreboard Logic Below */
 
 //Initialize scores for Team A  and Team B
 let teamAScore = 0;
@@ -190,9 +198,17 @@ function pauseRoundTimer() {
   }
 }
 
+function shortenTeamName(teamName) {
+  if (teamName.length > MAX_TEAM_NAME_CHAR_LEN) {
+    return teamName.substring(0, MAX_TEAM_NAME_CHAR_LEN) + " ...";
+  } else {
+    return teamName;
+  }
+}
+
 function editTeamNames() {
-  var leftTeamName = prompt("Left team name?");
-  var rightTeamName = prompt("Right team name?");
+  var leftTeamName = shortenTeamName(prompt("Left team name?"));
+  var rightTeamName = shortenTeamName(prompt("Right team name?"));
 
   document.querySelector('#leftTeamName').textContent = leftTeamName ? leftTeamName : DEFAULT_LEFT_TEAM_NAME;
   document.querySelector('#rightTeamName').textContent = rightTeamName ? rightTeamName : DEFAULT_RIGHT_TEAM_NAME;
@@ -222,6 +238,9 @@ document.onkeyup = function () {
 document.onkeydown = function () {
   var e = e || window.event; // for IE to cover IEs window event-object
 
+  if (e.which == 84) { // 't' key - edit team names
+    editTeamNames();
+  }
   if (isKeyPressed(65)) { // 'a' key is down (LEFT)
     document.querySelector('#leftTeamBox').style.backgroundColor = "#9D2235";
   }
@@ -300,8 +319,10 @@ document.onkeydown = function () {
 
 window.onload = function () {
   var roundDurationInput = prompt("Number of minutes in game?");
-  var roundDuration = (roundDurationInput ? roundDurationInput : 15) * 60;
+  var roundDuration = (isNaN(roundDurationInput) ? (roundDuration > 0 ? roundDurationInput : 15) : 15) * 60;
   var smallTimer = document.querySelector('#smallTimerCountdown');
+
+  alert("Press ESC (unpause round timer) to begin.")
 
   smallTimer.textContent = getTimerText(roundDuration);
   lastRoundTimer = startTimer(roundDuration, smallTimer, null);
