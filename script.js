@@ -336,9 +336,14 @@ document.onkeydown = function () {
 }
 
 window.onload = function () {
-  let roundDurationInput = prompt("Number of minutes in game?");
-  let roundDuration = (isNaN(roundDurationInput) ? (roundDurationInput > 0 ? roundDurationInput : DEFAULT_ROUND_MINS) : DEFAULT_ROUND_MINS) * 60;
   let smallTimer = document.querySelector('#smallTimerCountdown');
+  let roundDurationInput = prompt("Number of minutes in game?");
+  let roundDuration
+      = (isNaN(roundDurationInput) ?
+      DEFAULT_ROUND_MINS :
+      (roundDurationInput > 0 ?
+          roundDurationInput :
+          DEFAULT_ROUND_MINS)) * 60;
 
   alert("Press ESC (unpause round timer) to begin.")
 
