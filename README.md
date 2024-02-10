@@ -7,6 +7,14 @@ Santa Barbara.
 
   ---
 
+## Download
+
+If you're looking at this project from GitHub, please [download this repository as a ZIP archive](https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives)
+and unzip it on your computer before proceeding further.
+
+  ---
+
+
 ## Startup
 
 Open up `index.html` in your browser. `script.js` and `style.css` must be in the same 
