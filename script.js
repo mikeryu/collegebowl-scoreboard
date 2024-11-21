@@ -35,6 +35,7 @@ let lastQuestionTimer;
 let lastRoundTimer;
 let lastQuestionTimeAtPause;
 let lastRoundTimeAtPause;
+let isQuestionTimerRunning;
 let isQuestionTimerPaused;
 let isRoundTimerPaused;
 
@@ -146,10 +147,12 @@ function resetQuestionTimer() {
   document.querySelector('#bigTimerCountdown').textContent = '--:--';
 
   clearInterval(lastQuestionTimer);
+  isQuestionTimerRunning = false;
   lastQuestionTimer = null;
 }
 
 function startLongTimer(isLeftTeam, lastQuestionTimer) {
+  isQuestionTimerRunning = true;
   if (isLeftTeam) {
     toggleMarkerColor(document.querySelector('#bigTimerLeftMarker'), SET_ON);
     toggleMarkerColor(document.querySelector('#bigTimerRightMarker'), SET_OFF);
@@ -165,6 +168,7 @@ function startLongTimer(isLeftTeam, lastQuestionTimer) {
 }
 
 function startShortTimer(lastQuestionTimer) {
+  isQuestionTimerRunning = true;
   toggleMarkerColor(document.querySelector('#bigTimerRightMarker'), SET_ON);
   toggleMarkerColor(document.querySelector('#bigTimerLeftMarker'), SET_ON);
 
@@ -284,7 +288,7 @@ document.onkeydown = function () {
   if (!isRoundTimerPaused) {
 
     // Question Control Keys
-    if (!isQuestionTimerPaused) {
+    if (!isQuestionTimerPaused && !isQuestionTimerRunning) {
       if (e.which === 37) { // 'arrow left' key
         console.log("Follow up for the LEFT team.");
         lastQuestionTimer = startLongTimer(true, lastQuestionTimer);
@@ -302,6 +306,28 @@ document.onkeydown = function () {
       }
       if (e.which === 40) { // 'arrow down' key
         console.log("Resetting the question timer.");
+        resetQuestionTimer();
+        return false;
+      }
+    }
+    if (isQuestionTimerRunning) {
+      if (isKeyPressed(16) && isKeyPressed(37)) { // 'arrow left' key
+        console.log("[OVERRIDE DURING A RUNNING TIMER] Follow up for the LEFT team.");
+        lastQuestionTimer = startLongTimer(true, lastQuestionTimer);
+        return false;
+      }
+      if (isKeyPressed(16) && isKeyPressed(39)) { // 'arrow right' key
+        console.log("[OVERRIDE DURING A RUNNING TIMER] Follow up for the RIGHT team.");
+        lastQuestionTimer = startLongTimer(false, lastQuestionTimer);
+        return false;
+      }
+      if (isKeyPressed(16) && isKeyPressed(38)) { // 'arrow up' key
+        console.log("[OVERRIDE DURING A RUNNING TIMER] Toss up!");
+        lastQuestionTimer = startShortTimer(lastQuestionTimer);
+        return false;
+      }
+      if (isKeyPressed(16) && isKeyPressed(40)) { // 'arrow down' key
+        console.log("[OVERRIDE DURING A RUNNING TIMER] Resetting the question timer.");
         resetQuestionTimer();
         return false;
       }
@@ -349,6 +375,7 @@ window.onload = function () {
 
   smallTimer.textContent = getTimerText(roundDuration);
   lastRoundTimer = startTimer(roundDuration, smallTimer, null);
+  isQuestionTimerRunning = false;
 
   toggleMarkerColor(document.querySelector('#bigTimerRightMarker'), SET_OFF);
   toggleMarkerColor(document.querySelector('#bigTimerLeftMarker'), SET_OFF);
