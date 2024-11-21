@@ -1,0 +1,9 @@
+.problem-display {
+    background-color: #f9f9f9;
+    border: 1px solid #ccc;
+    padding: 1em;
+    margin: 1em auto;
+    width: min(90%, 40em);
+    border-radius: 0.5em;
+    text-align: center;
+}
