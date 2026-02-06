@@ -161,8 +161,6 @@ const unwrapMathDelimiters = (value: string): string => {
   return value.trim();
 };
 
-const injectMathBreakHints = (math: string): string => math.replace(/\s*([=+-])\s*/g, " \\allowbreak$1 ");
-
 const convertMixedLineToTeX = (line: string): string => {
   const segments = splitMixedSegments(line);
   const parts: string[] = [];
@@ -170,7 +168,7 @@ const convertMixedLineToTeX = (line: string): string => {
   for (const segment of segments) {
     if (segment.kind === "math") {
       const math = unwrapMathDelimiters(segment.value);
-      if (math) parts.push(injectMathBreakHints(math));
+      if (math) parts.push(math);
       continue;
     }
 
