@@ -25,6 +25,37 @@ describe("core state reducer", () => {
     expect(state.questionTimer.durationSeconds).toBe(45);
   });
 
+  it("allows in-game team-name updates while keeping setup timers/config locked", () => {
+    let state = setupState(1000);
+    state = reduceCommand(state, { type: "round:toggle" });
+    state = reduceCommand(state, { type: "flow:next" });
+
+    const baselineRoundLen = state.config.roundLengthSeconds;
+    const baselineTossupLen = state.config.tossupLengthSeconds;
+    const baselineFollowupLen = state.config.followupLengthSeconds;
+    const baselineWarn = state.config.warningThresholdSeconds;
+
+    const updated = reduceCommand(state, {
+      type: "setup:apply",
+      payload: {
+        leftTeamName: "Alpha",
+        rightTeamName: "Beta",
+        roundLengthSeconds: 1,
+        tossupLengthSeconds: 2,
+        followupLengthSeconds: 3,
+        warningThresholdSeconds: 4
+      }
+    });
+
+    expect(updated.leftTeam.name).toBe("Alpha");
+    expect(updated.rightTeam.name).toBe("Beta");
+    expect(updated.config.roundLengthSeconds).toBe(baselineRoundLen);
+    expect(updated.config.tossupLengthSeconds).toBe(baselineTossupLen);
+    expect(updated.config.followupLengthSeconds).toBe(baselineFollowupLen);
+    expect(updated.config.warningThresholdSeconds).toBe(baselineWarn);
+    expect(updated.started).toBe(true);
+  });
+
   it("starts toss-up from standby on flow:next", () => {
     let state = setupState();
     state = reduceCommand(state, { type: "round:toggle" });

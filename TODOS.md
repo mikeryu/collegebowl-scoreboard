@@ -266,6 +266,43 @@ Current phase: `Phase 2 - Feature Hardening`
 
 - [x] Center `ANSWER` label text on the answer panel
 
+## In Progress: Unsigned macOS Packaging
+
+- [x] Add electron-builder config and npm script for unsigned macOS zip packaging
+- [x] Support packaged-mode renderer loading (file:// dist assets without dev servers)
+- [x] Produce unsigned macOS zip artifact and document first-run quarantine bypass
+
+## In Progress: Projector Zero-Clipping Hardening
+
+- [x] Add robust mixed-text/math token wrapping so long inline equations cannot overflow panel width
+- [x] Tighten dense-mode trigger logic for math-heavy prompts to reduce clipping risk at large sizes
+
+## In Progress: Queue Exhaustion End-of-Game Signal
+
+- [x] Signal explicit end-of-game state in Controller when question queue is exhausted
+- [x] Signal explicit end-of-game state in Projector when question queue is exhausted
+
+## In Progress: Packaged App WSOD Fix
+
+- [x] Fix packaged renderer asset resolution for `file://` loads (Control + Projection)
+- [x] Rebuild unsigned macOS artifact and verify packaged bundle contains correct relative asset paths
+
+## In Progress: Setup Lock During Active Game
+
+- [x] Lock setup editing/actions once game has started
+- [x] Require full reset before setup changes are allowed again
+- [x] Enforce setup lock at reducer level (not only UI)
+
+## In Progress: Distribution Repackage
+
+- [x] Rebuild unsigned macOS zip distribution after latest setup-lock changes
+
+## In Progress: In-Game Team Name Editing
+
+- [x] Allow team name updates during active game
+- [x] Keep non-name setup fields locked until full reset
+- [x] Repackage unsigned macOS distribution after change
+
 ## In Progress: Round Expiry + Switch Claim Stability
 
 - [x] Prevent round timer expiry from auto-changing game phase/state

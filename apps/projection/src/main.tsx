@@ -90,14 +90,33 @@ const splitMixedSegments = (line: string): Segment[] => {
   return segments;
 };
 
+const isBreakableMathToken = (math: string): boolean => {
+  if (math.length < 24) return false;
+  if (/[{}]/.test(math)) return false;
+  if (/\\(frac|sqrt|begin|left|right|overline|underline|text)/.test(math)) return false;
+  return true;
+};
+
+const splitMathForWrap = (math: string): string[] => {
+  const compact = math.trim().replace(/\s+/g, " ");
+  if (!compact) return [];
+  if (!isBreakableMathToken(compact)) return [`$${compact}$`];
+
+  return compact
+    .replace(/([=+\-])/g, " $1 ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((token) => `$${token}$`);
+};
+
 const wrapMixedLine = (line: string, maxCharsPerLine: number = 52): string[] => {
   const segments = splitMixedSegments(line);
   const tokens: string[] = [];
 
   for (const segment of segments) {
     if (segment.kind === "math") {
-      const math = segment.value.trim();
-      if (math) tokens.push(math);
+      const math = unwrapMathDelimiters(segment.value);
+      if (math) tokens.push(...splitMathForWrap(math));
       continue;
     }
 
@@ -111,7 +130,7 @@ const wrapMixedLine = (line: string, maxCharsPerLine: number = 52): string[] => 
   let current = "";
 
   for (const token of tokens) {
-    const tokenWeight = /^\$|^\\\(|^\\\[/.test(token) ? Math.max(8, Math.floor(token.length * 0.3)) : token.length;
+    const tokenWeight = /^\$|^\\\(|^\\\[/.test(token) ? Math.max(7, Math.floor(token.length * 0.32)) : token.length;
     const currentWeight = current.length;
     const nextWeight = currentWeight === 0 ? tokenWeight : currentWeight + 1 + tokenWeight;
 
@@ -273,13 +292,37 @@ function App() {
     "answer:revealed"
   ];
   const showingQuestion = activeQuestionPhases.includes(state.phase);
-  const questionKindLabel = !showingQuestion ? "STANDBY" : state.questionKind === "followup" ? "FOLLOW-UP" : "TOSS-UP";
-  const questionKindClass = !showingQuestion ? "standby" : state.questionKind === "followup" ? "followup" : "tossup";
+  const isGameComplete = /game complete/i.test(displayPrompt);
+  const questionKindLabel = isGameComplete
+    ? "GAME COMPLETE"
+    : !showingQuestion
+      ? "STANDBY"
+      : state.questionKind === "followup"
+        ? "FOLLOW-UP"
+        : "TOSS-UP";
+  const questionKindClass = isGameComplete
+    ? "complete"
+    : !showingQuestion
+      ? "standby"
+      : state.questionKind === "followup"
+        ? "followup"
+        : "tossup";
 
   const isEmptyPrompt = displayPrompt.trim().toLowerCase().includes("awaiting");
   const isAwaitingNextPhase = displayPrompt.trim().toLowerCase() === "awaiting next phase";
   const promptLength = displayPrompt.trim().length;
-  const promptDensityClass = promptLength > 420 ? "ultra-dense" : promptLength > 260 ? "dense" : "";
+  const promptHasMath = /\$\$?|\\\(|\\\[|\\[a-zA-Z]+/.test(displayPrompt);
+  const promptDensityClass = promptHasMath
+    ? promptLength > 260
+      ? "ultra-dense"
+      : promptLength > 140
+        ? "dense"
+        : ""
+    : promptLength > 420
+      ? "ultra-dense"
+      : promptLength > 260
+        ? "dense"
+        : "";
   const answerVisible = state.question.displayMode === "answer-revealed" || state.question.displayMode === "solution-revealed";
 
   const answerBody = answerVisible ? (

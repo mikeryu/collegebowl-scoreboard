@@ -279,6 +279,7 @@ function App() {
   const useNowHoldTimeoutRef = useRef<number | null>(null);
   const useNowHoldTickRef = useRef<number | null>(null);
   const useNowHoldStartedAtRef = useRef<number | null>(null);
+  const endGameSignaledRef = useRef(false);
   const revealHoldCompletedRef = useRef(false);
   const [revealHoldProgress, setRevealHoldProgress] = useState(0);
   const [revealHoldRemainingMs, setRevealHoldRemainingMs] = useState(REVEAL_HOLD_MS);
@@ -305,8 +306,11 @@ function App() {
   });
 
   const gameLoaded = rounds.length > 0;
+  const setupLocked = Boolean(state?.started);
+  const setupConfigLocked = setupLocked;
   const currentRoundIndex = state?.currentRoundIndex ?? 0;
   const currentRound = rounds[currentRoundIndex] ?? null;
+  const queueExhausted = Boolean(state && gameLoaded && !currentRound && currentRoundIndex >= rounds.length);
   const selectedRound = rounds[selectedRoundIndex] ?? null;
 
   const pushRoundPhase = useCallback((round: RoundItem, phase: QuestionPhase) => {
@@ -384,10 +388,30 @@ function App() {
   }, [state]);
 
   useEffect(() => {
-    if (!state || !gameLoaded || !currentRound) return;
+    if (!state || !gameLoaded) return;
 
     const was = previousPhaseRef.current;
     const now = state.phase;
+
+    if (!currentRound && queueExhausted && now === "round-running:standby" && !endGameSignaledRef.current) {
+      send({
+        type: "question:set-content",
+        payload: {
+          prompt: "GAME COMPLETE - All rounds have been played.",
+          answer: "",
+          solution: ""
+        }
+      });
+      endGameSignaledRef.current = true;
+      previousPhaseRef.current = now;
+      return;
+    }
+
+    if (!currentRound) {
+      previousPhaseRef.current = now;
+      return;
+    }
+
     const wasFollowupActive =
       was === "followup:active-claimed-left" ||
       was === "followup:active-claimed-right" ||
@@ -411,15 +435,18 @@ function App() {
       send({
         type: "question:set-content",
         payload: {
-          prompt: "Awaiting question content",
+          prompt: "GAME COMPLETE - All rounds have been played.",
           answer: "",
           solution: ""
         }
       });
+      endGameSignaledRef.current = true;
+    } else {
+      endGameSignaledRef.current = false;
     }
 
     previousPhaseRef.current = now;
-  }, [currentRound, currentRoundIndex, gameLoaded, pushRoundPhase, rounds, state]);
+  }, [currentRound, currentRoundIndex, gameLoaded, pushRoundPhase, queueExhausted, rounds, state]);
 
   useEffect(() => {
     return () => {
@@ -501,6 +528,10 @@ function App() {
 
   const handleTexFile = useCallback(
     async (file: File) => {
+      if (setupConfigLocked) {
+        setUploadError("Setup is locked while a game is in progress. Use Full Reset to unlock setup changes.");
+        return;
+      }
       setUploadError(null);
       try {
         if (!file.name.toLowerCase().endsWith(".tex")) {
@@ -536,7 +567,7 @@ function App() {
         setUploadError("Unable to read the file. Please retry with a valid .tex template.");
       }
     },
-    []
+    [setupConfigLocked]
   );
 
   const downloadTemplate = useCallback(() => {
@@ -1302,6 +1333,9 @@ function App() {
                 ) : (
                   <>
                     <p className="ok-inline">Loaded: {uploadedFileName || `${rounds.length} rounds`}</p>
+                    {queueExhausted ? (
+                      <p className="warning-inline">End of game: all rounds in the queue have been played.</p>
+                    ) : null}
                     {!state.projectionOpen ? (
                       <p className="warning-inline">Projector is closed. Open projector to enable live controls.</p>
                     ) : null}
@@ -1382,7 +1416,7 @@ function App() {
               </div>
             ) : (
               <div className="queue-preview">
-                <p>No rounds loaded yet.</p>
+                <p>{gameLoaded ? "All rounds in queue have been played." : "No rounds loaded yet."}</p>
               </div>
             )}
           </aside>
@@ -1410,6 +1444,7 @@ function App() {
               <input
                 type="number"
                 value={setup.roundLengthSeconds}
+                disabled={setupConfigLocked}
                 onChange={(event) =>
                   setSetup((prev) => ({ ...prev, roundLengthSeconds: Number(event.target.value) }))
                 }
@@ -1420,6 +1455,7 @@ function App() {
               <input
                 type="number"
                 value={setup.warningThresholdSeconds}
+                disabled={setupConfigLocked}
                 onChange={(event) =>
                   setSetup((prev) => ({ ...prev, warningThresholdSeconds: Number(event.target.value) }))
                 }
@@ -1430,6 +1466,7 @@ function App() {
               <input
                 type="number"
                 value={setup.tossupLengthSeconds}
+                disabled={setupConfigLocked}
                 onChange={(event) =>
                   setSetup((prev) => ({ ...prev, tossupLengthSeconds: Number(event.target.value) }))
                 }
@@ -1440,6 +1477,7 @@ function App() {
               <input
                 type="number"
                 value={setup.followupLengthSeconds}
+                disabled={setupConfigLocked}
                 onChange={(event) =>
                   setSetup((prev) => ({ ...prev, followupLengthSeconds: Number(event.target.value) }))
                 }
@@ -1447,7 +1485,7 @@ function App() {
             </div>
           </div>
           <button className="primary setup-apply-btn" onClick={() => send({ type: "setup:apply", payload: setup })}>
-            Apply Setup
+            {setupConfigLocked ? "Apply Team Names" : "Apply Setup"}
           </button>
 
           <h3>Game .tex File</h3>
@@ -1455,12 +1493,13 @@ function App() {
             Download template, fill rounds, then load. One round contains toss-up + toss-up answer + follow-up + follow-up answer.
           </p>
           <div className="queue-actions setup-file-actions">
-            <button onClick={downloadTemplate}>Download Template</button>
-            <label className="file-btn">
+            <button onClick={downloadTemplate} disabled={setupConfigLocked}>Download Template</button>
+            <label className={`file-btn ${setupConfigLocked ? "disabled" : ""}`}>
               Load .tex
               <input
                 type="file"
                 accept=".tex,text/plain"
+                disabled={setupConfigLocked}
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   if (file) void handleTexFile(file);
@@ -1472,6 +1511,9 @@ function App() {
           <div className="setup-live-row">
             <button className="primary setup-live-btn" onClick={() => setActiveTab("live")}>Go To Live</button>
           </div>
+          {setupConfigLocked ? (
+            <p className="warning-inline">Game in progress: only team names can be updated. Use Full Reset in Live tab to unlock timer/setup and file changes.</p>
+          ) : null}
           <p className="ok-inline">{uploadedFileName ? `Loaded ${uploadedFileName} (${rounds.length} rounds).` : "No game file loaded."}</p>
           {uploadError ? <p className="warning-inline">{uploadError}</p> : null}
         </section>

@@ -246,6 +246,11 @@ body {
   color: #f1f4f8;
 }
 
+.question-kind-banner.complete {
+  background: linear-gradient(160deg, rgba(206, 184, 136, 0.95), rgba(243, 229, 194, 0.96));
+  color: #2c2313;
+}
+
 .panel-label {
   margin: 0 0 0.7rem;
   text-transform: uppercase;
