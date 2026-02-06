@@ -44,6 +44,9 @@ bun run package:mac:unsigned
 Artifact:
 - `dist/mac-unsigned/Scoreboard-0.1.0-mac-unsigned-arm64.zip`
 
+Download-and-try:
+- [Scoreboard-0.1.0-mac-unsigned-arm64.zip](./Scoreboard-0.1.0-mac-unsigned-arm64.zip)
+
 First run on recipient Mac:
 1. Move `Scoreboard.app` to `/Applications`.
 2. Run:

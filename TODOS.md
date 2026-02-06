@@ -323,6 +323,12 @@ Current phase: `Phase 2 - Feature Hardening`
 - [x] Make README concise and current for setup, run, packaging, and operation
 - [x] Push README cleanup to `main`
 
+## In Progress: Root Distribution Drop + README Link
+
+- [x] Copy latest unsigned macOS zip artifact to repository root
+- [x] Add direct download-and-try link in README to root artifact
+- [x] Commit and push to `main`
+
 ## In Progress: Round Expiry + Switch Claim Stability
 
 - [x] Prevent round timer expiry from auto-changing game phase/state
