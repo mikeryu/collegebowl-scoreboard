@@ -303,6 +303,15 @@ Current phase: `Phase 2 - Feature Hardening`
 - [x] Keep non-name setup fields locked until full reset
 - [x] Repackage unsigned macOS distribution after change
 
+## In Progress: CI Lint Fix
+
+- [x] Fix `no-useless-escape` error in `apps/projection/src/main.tsx`
+
+## In Progress: Post-Lint Release Sync
+
+- [x] Repackage unsigned macOS artifact after lint fix
+- [x] Commit and push release-sync changes
+
 ## In Progress: Round Expiry + Switch Claim Stability
 
 - [x] Prevent round timer expiry from auto-changing game phase/state
