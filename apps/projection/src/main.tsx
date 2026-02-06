@@ -103,7 +103,7 @@ const splitMathForWrap = (math: string): string[] => {
   if (!isBreakableMathToken(compact)) return [`$${compact}$`];
 
   return compact
-    .replace(/([=+\-])/g, " $1 ")
+    .replace(/([=+-])/g, " $1 ")
     .split(/\s+/)
     .filter(Boolean)
     .map((token) => `$${token}$`);
