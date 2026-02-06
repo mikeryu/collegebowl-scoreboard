@@ -30,14 +30,17 @@ interface LiveAction {
   primary?: boolean;
   danger?: boolean;
   requiresHold?: boolean;
-  holdKind?: "flow" | "reveal";
+  holdKind?: "flow" | "reveal" | "override";
+  holdMs?: number;
 }
 
 const MAX_TEX_BYTES = 750_000;
 const MAX_ROUNDS = 200;
 const REVEAL_HOLD_MS = 1000;
+const OVERRIDE_HOLD_MS = 2000;
 const PROJECTOR_CLOSE_HOLD_MS = 1000;
 const GAME_RESET_HOLD_MS = 3000;
+const USE_NOW_HOLD_MS = 2000;
 
 const TEX_TEMPLATE = String.raw`% Scoreboard Game Template (.tex)
 % Valid and compilable in Overleaf.
@@ -148,6 +151,8 @@ const extractEnv = (source: string, envName: string): string | null => {
   return match?.[1].trim() || null;
 };
 
+const stripTrailingPeriod = (text: string): string => text.trim().replace(/\.\s*$/, "");
+
 const parseRoundsFromTex = (rawText: string): ParseResult => {
   const errors: string[] = [];
   const text = rawText.replace(/\r\n/g, "\n").trim();
@@ -161,11 +166,11 @@ const parseRoundsFromTex = (rawText: string): ParseResult => {
   }
 
   if (!/\\documentclass(?:\[[^\]]*\])?\{[^}]+\}/.test(text)) {
-    errors.push("Missing \\documentclass. Upload a full compilable LaTeX document.");
+    errors.push("Missing \\documentclass. Load a full compilable LaTeX document.");
   }
 
   if (!/\\begin\{document\}/.test(text) || !/\\end\{document\}/.test(text)) {
-    errors.push("Missing \\begin{document}/\\end{document}. Upload a full compilable LaTeX document.");
+    errors.push("Missing \\begin{document}/\\end{document}. Load a full compilable LaTeX document.");
   }
 
   const forbiddenCommand = /\\(input|include|openout|write|write18|read|catcode|immediate)\b/i;
@@ -217,9 +222,9 @@ const parseRoundsFromTex = (rawText: string): ParseResult => {
       id: `round-${index + 1}`,
       title: `Round ${index + 1}`,
       tossup,
-      tossupAnswer,
+      tossupAnswer: stripTrailingPeriod(tossupAnswer),
       followup,
-      followupAnswer,
+      followupAnswer: stripTrailingPeriod(followupAnswer),
       emceeNotes: emceeNotes ?? ""
     });
   });
@@ -248,7 +253,7 @@ function send(command: AppCommand): void {
 
 function App() {
   const [state, setState] = useState<AppState | null>(null);
-  const [activeTab, setActiveTab] = useState<TabKey>("live");
+  const [activeTab, setActiveTab] = useState<TabKey>("setup");
   const [leftHeld, setLeftHeld] = useState(false);
   const [rightHeld, setRightHeld] = useState(false);
   const [rounds, setRounds] = useState<RoundItem[]>([]);
@@ -271,6 +276,9 @@ function App() {
   const gameResetHoldTimeoutRef = useRef<number | null>(null);
   const gameResetHoldTickRef = useRef<number | null>(null);
   const gameResetHoldStartedAtRef = useRef<number | null>(null);
+  const useNowHoldTimeoutRef = useRef<number | null>(null);
+  const useNowHoldTickRef = useRef<number | null>(null);
+  const useNowHoldStartedAtRef = useRef<number | null>(null);
   const revealHoldCompletedRef = useRef(false);
   const [revealHoldProgress, setRevealHoldProgress] = useState(0);
   const [revealHoldRemainingMs, setRevealHoldRemainingMs] = useState(REVEAL_HOLD_MS);
@@ -283,6 +291,8 @@ function App() {
   const [projectorCloseHoldRemainingMs, setProjectorCloseHoldRemainingMs] = useState(PROJECTOR_CLOSE_HOLD_MS);
   const [gameResetHoldProgress, setGameResetHoldProgress] = useState(0);
   const [gameResetHoldRemainingMs, setGameResetHoldRemainingMs] = useState(GAME_RESET_HOLD_MS);
+  const [useNowHoldProgress, setUseNowHoldProgress] = useState(0);
+  const [useNowHoldRemainingMs, setUseNowHoldRemainingMs] = useState(USE_NOW_HOLD_MS);
   const [showPauseGlyph, setShowPauseGlyph] = useState(false);
 
   const [setup, setSetup] = useState<SetupPayload>({
@@ -367,8 +377,8 @@ function App() {
     if (prev.round > 10 && roundNow <= 10 && roundNow > 0) playWarningBeep();
     if (prev.question > 10 && questionNow <= 10 && questionNow > 0) playWarningBeep();
 
-    if (prev.round > 0 && roundNow === 0) playExpiredAlarm();
-    if (prev.question > 0 && questionNow === 0) playExpiredAlarm();
+    if (prev.round === 1 && roundNow === 0) playExpiredAlarm();
+    if (prev.question === 1 && questionNow === 0) playExpiredAlarm();
 
     previousTimesRef.current = { round: roundNow, question: questionNow };
   }, [state]);
@@ -445,6 +455,14 @@ function App() {
         window.clearInterval(gameResetHoldTickRef.current);
         gameResetHoldTickRef.current = null;
       }
+      if (useNowHoldTimeoutRef.current) {
+        window.clearTimeout(useNowHoldTimeoutRef.current);
+        useNowHoldTimeoutRef.current = null;
+      }
+      if (useNowHoldTickRef.current) {
+        window.clearInterval(useNowHoldTickRef.current);
+        useNowHoldTickRef.current = null;
+      }
     };
   }, []);
 
@@ -486,7 +504,7 @@ function App() {
       setUploadError(null);
       try {
         if (!file.name.toLowerCase().endsWith(".tex")) {
-          setUploadError("Please upload a .tex file.");
+          setUploadError("Please load a .tex file.");
           return;
         }
 
@@ -586,6 +604,7 @@ function App() {
       if (!state) return;
       const key = event.key;
       const editable = isEditableTarget(event.target);
+      const liveOpsKeyboardEnabled = gameLoaded && state.projectionOpen;
 
       if (!editable && ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "Escape"].includes(key)) {
         event.preventDefault();
@@ -595,6 +614,7 @@ function App() {
       if (key.toLowerCase() === "d") setRightHeld(true);
 
       if (editable) return;
+      if (!liveOpsKeyboardEnabled) return;
 
       if (event.repeat && !["w", "s"].includes(key.toLowerCase())) return;
 
@@ -638,7 +658,7 @@ function App() {
   }, [gameLoaded, leftHeld, rightHeld, state]);
 
   const nextFlowStep = useMemo(() => {
-    if (!state || !gameLoaded) return "Upload game and start round";
+    if (!state || !gameLoaded) return "Load game and start round";
 
     switch (state.phase) {
       case "round-running:standby":
@@ -665,6 +685,19 @@ function App() {
   const liveActions = useMemo<LiveAction[]>(() => {
     if (!state) return [];
 
+    const withOverride = (list: LiveAction[]): LiveAction[] => {
+      list.push({
+        key: "override-next",
+        label: "Override: Force Advance",
+        command: { type: "flow:override-next" },
+        danger: true,
+        requiresHold: true,
+        holdKind: "override",
+        holdMs: OVERRIDE_HOLD_MS
+      });
+      return list;
+    };
+
     const actions: LiveAction[] = [];
 
     if (state.phase === "round-running:standby") {
@@ -675,7 +708,7 @@ function App() {
         primary: true,
         requiresHold: true
       });
-      return actions;
+      return withOverride(actions);
     }
 
     if (state.phase === "followup:standby") {
@@ -687,14 +720,14 @@ function App() {
         requiresHold: true,
         holdKind: "flow"
       });
-      return actions;
+      return withOverride(actions);
     }
 
     if (state.phase === "tossup:active") {
       actions.push({ key: "claim-left", label: "Left Claims", command: { type: "flow:claim-left" }, primary: true });
       actions.push({ key: "claim-right", label: "Right Claims", command: { type: "flow:claim-right" }, primary: true });
       actions.push({ key: "timeout", label: "Time Expired / No Claim", command: { type: "flow:tossup-timeout" } });
-      return actions;
+      return withOverride(actions);
     }
 
     if (state.phase === "tossup:review" && state.claimOwner !== "none") {
@@ -710,7 +743,7 @@ function App() {
         command: { type: "flow:tossup-incorrect", side: state.claimOwner },
         danger: true
       });
-      return actions;
+      return withOverride(actions);
     }
 
     if (state.phase === "tossup:review" && state.claimOwner === "none") {
@@ -731,14 +764,14 @@ function App() {
         label: "No One Answered",
         command: { type: "flow:tossup-no-answer" }
       });
-      return actions;
+      return withOverride(actions);
     }
 
     if (state.phase === "followup:active-open") {
       actions.push({ key: "followup-claim-left", label: "Left Claims Follow-up", command: { type: "flow:claim-left" }, primary: true });
       actions.push({ key: "followup-claim-right", label: "Right Claims Follow-up", command: { type: "flow:claim-right" }, primary: true });
       actions.push({ key: "followup-timeout-open", label: "Time Expired", command: { type: "flow:followup-timeout" } });
-      return actions;
+      return withOverride(actions);
     }
 
     if (state.phase === "followup:review" && state.claimOwner !== "none") {
@@ -754,7 +787,7 @@ function App() {
         command: { type: "flow:followup-incorrect", side: state.claimOwner },
         danger: true
       });
-      return actions;
+      return withOverride(actions);
     }
 
     if (state.phase === "followup:review" && state.claimOwner === "none") {
@@ -775,7 +808,7 @@ function App() {
         label: "No One Answered",
         command: { type: "flow:followup-no-answer" }
       });
-      return actions;
+      return withOverride(actions);
     }
 
     if (state.phase === "followup:active-claimed-left" || state.phase === "followup:active-claimed-right") {
@@ -794,7 +827,7 @@ function App() {
       });
       actions.push({ key: "switch-claim", label: "Switch Claim", command: { type: "flow:switch-claim" }, danger: true });
       actions.push({ key: "followup-timeout-claimed", label: "Time Expired", command: { type: "flow:followup-timeout" } });
-      return actions;
+      return withOverride(actions);
     }
 
     if (state.phase === "answer:revealed") {
@@ -804,7 +837,7 @@ function App() {
         command: { type: "flow:next" },
         primary: true
       });
-      return actions;
+      return withOverride(actions);
     }
 
     if (state.phase === "answer:eligible") {
@@ -817,16 +850,17 @@ function App() {
         requiresHold: true,
         holdKind: "reveal"
       });
-      return actions;
+      return withOverride(actions);
     }
 
-    return actions;
+    return withOverride(actions);
   }, [state]);
 
   if (!state) {
     return <main className="control-shell" />;
   }
 
+  const liveOpsEnabled = gameLoaded && state.projectionOpen;
   const roundPaused =
     state.started && state.phase !== "round-ended" && !state.roundTimer.running && state.roundTimer.secondsRemaining > 0;
   const questionPaused =
@@ -851,22 +885,23 @@ function App() {
 
   const beginActionHold = (action: LiveAction): void => {
     if (actionHoldTimeoutRef.current) return;
+    const holdMs = action.holdMs ?? REVEAL_HOLD_MS;
     setActionHoldKey(action.key);
     actionHoldStartedAtRef.current = performance.now();
     setActionHoldProgress(0);
-    setActionHoldRemainingMs(REVEAL_HOLD_MS);
+    setActionHoldRemainingMs(holdMs);
 
     actionHoldTickRef.current = window.setInterval(() => {
       if (!actionHoldStartedAtRef.current) return;
       const elapsed = performance.now() - actionHoldStartedAtRef.current;
-      setActionHoldProgress(Math.max(0, Math.min(1, elapsed / REVEAL_HOLD_MS)));
-      setActionHoldRemainingMs(Math.max(0, REVEAL_HOLD_MS - elapsed));
+      setActionHoldProgress(Math.max(0, Math.min(1, elapsed / holdMs)));
+      setActionHoldRemainingMs(Math.max(0, holdMs - elapsed));
     }, 40);
 
     actionHoldTimeoutRef.current = window.setTimeout(() => {
       runAction(action);
       setActionHoldProgress(0);
-      setActionHoldRemainingMs(REVEAL_HOLD_MS);
+      setActionHoldRemainingMs(holdMs);
       setActionHoldKey(null);
       actionHoldStartedAtRef.current = null;
       if (actionHoldTickRef.current) {
@@ -874,7 +909,7 @@ function App() {
         actionHoldTickRef.current = null;
       }
       actionHoldTimeoutRef.current = null;
-    }, REVEAL_HOLD_MS);
+    }, holdMs);
   };
 
   const cancelActionHold = (): void => {
@@ -976,6 +1011,47 @@ function App() {
     setGameResetHoldRemainingMs(GAME_RESET_HOLD_MS);
   };
 
+  const beginUseNowHold = (): void => {
+    if (useNowHoldTimeoutRef.current) return;
+    if (!gameLoaded || !rounds[selectedRoundIndex]) return;
+    useNowHoldStartedAtRef.current = performance.now();
+    setUseNowHoldProgress(0);
+    setUseNowHoldRemainingMs(USE_NOW_HOLD_MS);
+
+    useNowHoldTickRef.current = window.setInterval(() => {
+      if (!useNowHoldStartedAtRef.current) return;
+      const elapsed = performance.now() - useNowHoldStartedAtRef.current;
+      setUseNowHoldProgress(Math.max(0, Math.min(1, elapsed / USE_NOW_HOLD_MS)));
+      setUseNowHoldRemainingMs(Math.max(0, USE_NOW_HOLD_MS - elapsed));
+    }, 40);
+
+    useNowHoldTimeoutRef.current = window.setTimeout(() => {
+      send({ type: "flow:jump-round", roundIndex: selectedRoundIndex });
+      setUseNowHoldProgress(0);
+      setUseNowHoldRemainingMs(USE_NOW_HOLD_MS);
+      useNowHoldStartedAtRef.current = null;
+      if (useNowHoldTickRef.current) {
+        window.clearInterval(useNowHoldTickRef.current);
+        useNowHoldTickRef.current = null;
+      }
+      useNowHoldTimeoutRef.current = null;
+    }, USE_NOW_HOLD_MS);
+  };
+
+  const cancelUseNowHold = (): void => {
+    if (useNowHoldTimeoutRef.current) {
+      window.clearTimeout(useNowHoldTimeoutRef.current);
+      useNowHoldTimeoutRef.current = null;
+    }
+    if (useNowHoldTickRef.current) {
+      window.clearInterval(useNowHoldTickRef.current);
+      useNowHoldTickRef.current = null;
+    }
+    useNowHoldStartedAtRef.current = null;
+    setUseNowHoldProgress(0);
+    setUseNowHoldRemainingMs(USE_NOW_HOLD_MS);
+  };
+
   const futureStepHints = (() => {
     switch (state.phase) {
       case "round-running:standby":
@@ -1051,11 +1127,12 @@ function App() {
                 <div className="score-line">
                   <strong>{state.leftTeam.score}</strong>
                   <span>
-                    <button onClick={() => changeScore("left", 1)}>+1</button>
-                    <button onClick={() => changeScore("left", -1)}>-1</button>
+                    <button onClick={() => changeScore("left", 1)} disabled={!liveOpsEnabled}>+1</button>
+                    <button onClick={() => changeScore("left", -1)} disabled={!liveOpsEnabled}>-1</button>
                     <button
                       className={state.claimOwner === "left" ? "claim-btn active" : "claim-btn"}
                       onClick={() => toggleManualClaim("left")}
+                      disabled={!liveOpsEnabled}
                     >
                       Claim
                     </button>
@@ -1067,11 +1144,12 @@ function App() {
                 <div className="score-line">
                   <strong>{state.rightTeam.score}</strong>
                   <span>
-                    <button onClick={() => changeScore("right", 1)}>+1</button>
-                    <button onClick={() => changeScore("right", -1)}>-1</button>
+                    <button onClick={() => changeScore("right", 1)} disabled={!liveOpsEnabled}>+1</button>
+                    <button onClick={() => changeScore("right", -1)} disabled={!liveOpsEnabled}>-1</button>
                     <button
                       className={state.claimOwner === "right" ? "claim-btn active" : "claim-btn"}
                       onClick={() => toggleManualClaim("right")}
+                      disabled={!liveOpsEnabled}
                     >
                       Claim
                     </button>
@@ -1084,25 +1162,28 @@ function App() {
               <article className="panel presenter-panel">
                 <p className="label">Projector Controls</p>
                 <div className="global-controls projector-controls">
-                  <button onClick={() => projectionAction("projection:open")}>Open Projector</button>
+                  {!state.projectionOpen ? (
+                    <button className="open-projector-btn" onClick={() => projectionAction("projection:open")}>Open Projector</button>
+                  ) : (
+                    <button
+                      className="reveal-hold hold-close-projector"
+                      onMouseDown={beginProjectorCloseHold}
+                      onMouseUp={cancelProjectorCloseHold}
+                      onMouseLeave={cancelProjectorCloseHold}
+                      onTouchStart={beginProjectorCloseHold}
+                      onTouchEnd={cancelProjectorCloseHold}
+                      onTouchCancel={cancelProjectorCloseHold}
+                    >
+                      <span
+                        className="hold-fill"
+                        style={{ transform: `scaleX(${projectorCloseHoldProgress})` }}
+                      />
+                      <span className="hold-label">
+                        HOLD TO CLOSE PROJECTOR ({(projectorCloseHoldRemainingMs / 1000).toFixed(2)}s)
+                      </span>
+                    </button>
+                  )}
                   <button onClick={() => projectionAction("projection:refresh")}>Refresh Projector</button>
-                  <button
-                    className="reveal-hold hold-close-projector"
-                    onMouseDown={beginProjectorCloseHold}
-                    onMouseUp={cancelProjectorCloseHold}
-                    onMouseLeave={cancelProjectorCloseHold}
-                    onTouchStart={beginProjectorCloseHold}
-                    onTouchEnd={cancelProjectorCloseHold}
-                    onTouchCancel={cancelProjectorCloseHold}
-                  >
-                    <span
-                      className="hold-fill"
-                      style={{ transform: `scaleX(${projectorCloseHoldProgress})` }}
-                    />
-                    <span className="hold-label">
-                      HOLD TO CLOSE PROJECTOR ({(projectorCloseHoldRemainingMs / 1000).toFixed(2)}s)
-                    </span>
-                  </button>
                 </div>
               </article>
 
@@ -1112,12 +1193,11 @@ function App() {
                   <button
                     className={state.roundTimer.running ? "round-toggle-btn pause-mode" : "round-toggle-btn start-mode"}
                     onClick={() => send({ type: "round:toggle" })}
-                    disabled={!gameLoaded}
+                    disabled={!liveOpsEnabled}
                   >
                     {state.roundTimer.running ? "Pause Round" : "Start Round"}
                   </button>
-                  <button onClick={() => send({ type: "question:toggle-pause" })}>Pause/Resume Q Timer</button>
-                  <button onClick={() => send({ type: "question:reset" })}>Reset Standby</button>
+                  <button onClick={() => send({ type: "question:toggle-pause" })} disabled={!liveOpsEnabled}>Pause/Resume Question Timer</button>
                 </div>
               </article>
 
@@ -1140,6 +1220,7 @@ function App() {
                             className={[
                               "primary action-btn reveal-hold",
                               action.holdKind === "reveal" ? "caution" : "",
+                              action.holdKind === "override" ? "override-hold-btn" : "",
                               activeActionKey === action.key ? "pulse" : ""
                             ]
                               .filter(Boolean)
@@ -1154,7 +1235,7 @@ function App() {
                             }
                             onTouchEnd={action.holdKind === "reveal" ? cancelRevealHold : cancelActionHold}
                             onTouchCancel={action.holdKind === "reveal" ? cancelRevealHold : cancelActionHold}
-                            disabled={!gameLoaded}
+                            disabled={!liveOpsEnabled}
                           >
                             <span
                               className="hold-fill"
@@ -1168,19 +1249,19 @@ function App() {
                                 })`
                               }}
                             />
-                            <span className="hold-label">
-                              {action.label} (
-                              {(
-                                (
-                                  action.holdKind === "reveal"
-                                    ? revealHoldRemainingMs
-                                    : actionHoldKey === action.key
-                                      ? actionHoldRemainingMs
-                                      : REVEAL_HOLD_MS
-                                ) / 1000
-                              ).toFixed(2)}
-                              s)
-                            </span>
+                              <span className="hold-label">
+                                {action.label} (
+                                {(
+                                  (
+                                    action.holdKind === "reveal"
+                                      ? revealHoldRemainingMs
+                                      : actionHoldKey === action.key
+                                        ? actionHoldRemainingMs
+                                      : action.holdMs ?? REVEAL_HOLD_MS
+                                  ) / 1000
+                                ).toFixed(2)}
+                                s)
+                              </span>
                           </button>
                         ) : (
                           <button
@@ -1193,7 +1274,7 @@ function App() {
                               .filter(Boolean)
                               .join(" ")}
                             onClick={() => runAction(action)}
-                            disabled={!gameLoaded}
+                            disabled={!liveOpsEnabled}
                           >
                             {action.label}
                           </button>
@@ -1217,9 +1298,14 @@ function App() {
                 </div>
 
                 {!gameLoaded ? (
-                  <p className="warning-inline">Upload a game .tex file in Setup before starting Live.</p>
+                  <p className="warning-inline">Load a game .tex file in Setup before starting Live.</p>
                 ) : (
-                  <p className="ok-inline">Loaded: {uploadedFileName || `${rounds.length} rounds`}</p>
+                  <>
+                    <p className="ok-inline">Loaded: {uploadedFileName || `${rounds.length} rounds`}</p>
+                    {!state.projectionOpen ? (
+                      <p className="warning-inline">Projector is closed. Open projector to enable live controls.</p>
+                    ) : null}
+                  </>
                 )}
               </article>
             </section>
@@ -1255,8 +1341,7 @@ function App() {
                   onClick={() => setSelectedRoundIndex(index)}
                 >
                   <strong>{round.title}</strong>
-                  <span>Toss-up: {round.tossup.slice(0, 80)}</span>
-                  <span>Follow-up: {round.followup.slice(0, 80)}</span>
+                  <span>{round.tossup.slice(0, 100)}</span>
                 </button>
               ))}
             </div>
@@ -1273,7 +1358,19 @@ function App() {
               >
                 Next
               </button>
-              <button className="primary" onClick={() => setActiveTab("setup")}>Open Setup</button>
+              <button
+                className="reveal-hold use-now-hold-btn"
+                onMouseDown={beginUseNowHold}
+                onMouseUp={cancelUseNowHold}
+                onMouseLeave={cancelUseNowHold}
+                onTouchStart={beginUseNowHold}
+                onTouchEnd={cancelUseNowHold}
+                onTouchCancel={cancelUseNowHold}
+                disabled={!liveOpsEnabled}
+              >
+                <span className="hold-fill" style={{ transform: `scaleX(${useNowHoldProgress})` }} />
+                <span className="hold-label">USE NOW ({(useNowHoldRemainingMs / 1000).toFixed(2)}s)</span>
+              </button>
             </div>
             {selectedRound ? (
               <div className="queue-preview">
@@ -1349,18 +1446,18 @@ function App() {
               />
             </div>
           </div>
-          <button className="primary" onClick={() => send({ type: "setup:apply", payload: setup })}>
+          <button className="primary setup-apply-btn" onClick={() => send({ type: "setup:apply", payload: setup })}>
             Apply Setup
           </button>
 
           <h3>Game .tex File</h3>
           <p className="hint">
-            Download template, fill rounds, then upload. One round contains toss-up + toss-up answer + follow-up + follow-up answer.
+            Download template, fill rounds, then load. One round contains toss-up + toss-up answer + follow-up + follow-up answer.
           </p>
-          <div className="queue-actions">
+          <div className="queue-actions setup-file-actions">
             <button onClick={downloadTemplate}>Download Template</button>
             <label className="file-btn">
-              Upload .tex
+              Load .tex
               <input
                 type="file"
                 accept=".tex,text/plain"
@@ -1371,7 +1468,9 @@ function App() {
                 }}
               />
             </label>
-            <button className="primary" onClick={() => setActiveTab("live")}>Go To Live</button>
+          </div>
+          <div className="setup-live-row">
+            <button className="primary setup-live-btn" onClick={() => setActiveTab("live")}>Go To Live</button>
           </div>
           <p className="ok-inline">{uploadedFileName ? `Loaded ${uploadedFileName} (${rounds.length} rounds).` : "No game file loaded."}</p>
           {uploadError ? <p className="warning-inline">{uploadError}</p> : null}
@@ -1381,14 +1480,14 @@ function App() {
       {showUploadModal && !gameLoaded ? (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal-card">
-            <h2>Upload Game .tex Before Beginning</h2>
+            <h2>Load Game .tex Before Beginning</h2>
             <p>
-              The game queue is round-based. Download the template, fill your rounds, and upload the `.tex` file.
+              The game queue is round-based. Download the template, fill your rounds, and load the `.tex` file.
             </p>
             <div className="queue-actions">
               <button onClick={downloadTemplate}>Download Template</button>
               <label className="file-btn">
-                Upload .tex
+                Load .tex
                 <input
                   type="file"
                   accept=".tex,text/plain"

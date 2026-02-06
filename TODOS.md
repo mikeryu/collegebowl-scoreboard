@@ -169,6 +169,118 @@ Current phase: `Phase 2 - Feature Hardening`
 - [x] Commit all changes and push branch
 - [x] Open PR via `gh` with implementation summary and validation notes
 
+## In Progress: Minor UI Corrections
+
+- [x] Center projector toss/follow indicator pill precisely
+- [x] Make controller `Open Projector` button red-emphasis
+
+## In Progress: Queue List Visual Cleanup
+
+- [x] Style/hide queue scrollbar to match dark control theme
+- [x] Simplify queue rows to round number + single truncated question line
+
+## In Progress: Dynamic Round Swap Control
+
+- [x] Replace queue `Open Setup` button with `USE NOW` hold action (2s)
+- [x] Add command/state handling to jump active round index safely during live operation
+
+## In Progress: Expired Alarm Trigger Precision
+
+- [x] Trigger expired alarm only on `01 -> 00` transition (no repeats at steady `00:00`)
+
+## In Progress: Projector Question-Type Pill State
+
+- [x] Show grey `STANDBY` pill unless a question is actively on-screen
+
+## In Progress: Force-Advance Safety Override
+
+- [x] Add always-visible `Override: Force Advance` action at bottom of `Buttons Available Now`
+- [x] Add `flow:override-next` reducer path to force progression when normal transitions are blocked
+
+## In Progress: Override Control Affordance Tuning
+
+- [x] Make override action compact (low-height) and visually secondary
+- [x] Require 2-second hold for override action
+
+## In Progress: Projector Toggle Control Simplification
+
+- [x] Make `Open Projector` a state-aware toggle (open vs hold-to-close)
+- [x] Reduce projector controls panel to 2 buttons total
+
+## In Progress: Projector-Open Safety Gating
+
+- [x] Disable score/game-state/state-transition controls when projector is closed
+- [x] Gate related keyboard shortcuts behind projector-open state
+
+## In Progress: Projection Prompt Overflow Safety
+
+- [x] Ensure question text never clips/overflows out of view
+- [x] Force safe wrapping behavior for long MathJax-rendered prompt content
+
+## In Progress: Remove Reset Standby Control
+
+- [x] Remove `Reset Standby` button from controller global controls
+
+## In Progress: Setup Tab Layout Polish
+
+- [x] Default controller startup tab to `Setup`
+- [x] Make `Apply Setup` full-width with top margin
+- [x] Move `Go To Live` to its own row and make it full-width
+
+## In Progress: Setup File Action Copy + Layout
+
+- [x] Make `Download Template` and `Load .tex` buttons 50/50 width in setup row
+- [x] Replace UI copy `Upload` -> `Load` in control setup/preflight surfaces
+
+## In Progress: Global Control Button Layout + Copy
+
+- [x] Make `Start Round` and `Pause/Resume Question Timer` 50/50 width in global game controls
+- [x] Rename `Pause/Resume Q Timer` -> `Pause/Resume Question Timer`
+
+## In Progress: Projector Long Prompt Readability Hotfix
+
+- [x] Prevent long plain-text toss-ups from rendering as single unbreakable TeX line
+- [x] Add safe prompt-area overflow handling so all question text remains readable
+
+## In Progress: Projector Prompt No-Clipping Refinement
+
+- [x] Apply constrained readable line width for question prose in projector panel
+- [x] Fix question header label copy and rebalance vertical spacing
+- [x] Eliminate residual right-edge clipping for long plain-text prompts
+
+## In Progress: Unified LaTeX Text Rendering Consistency
+
+- [x] Make mixed plain-text + LaTeX prompts render through one unified LaTeX formatting path
+- [x] Preserve inline math fidelity while matching plain-text visual rhythm
+
+## In Progress: Mixed TeX Clipping Regression + Answer Punctuation
+
+- [x] Fix mixed plain+LaTeX prompt wrapping to prevent right-edge clipping regressions
+- [x] Remove trailing periods from answers during parse and projection display
+
+## In Progress: Answer Typography Proportion Tuning
+
+- [x] Match answer text scale to question text scale at approximately 2pt smaller
+
+## In Progress: Answer Panel Label Alignment
+
+- [x] Center `ANSWER` label text on the answer panel
+
+## In Progress: Round Expiry + Switch Claim Stability
+
+- [x] Prevent round timer expiry from auto-changing game phase/state
+- [x] Harden follow-up `Switch Claim` so correct/incorrect actions remain available after switching
+- [x] Add reducer regression tests for both behaviors
+
+## In Progress: Awaiting-State Spinner UX
+
+- [x] Replace projector `Awaiting next phase` text placeholder with spinner indicator
+
+## In Progress: Control Surface Simplification
+
+- [ ] Remove `Reset Standby` control from global game controls
+- [ ] Remove keyboard shortcut handling from controller UI (panel-only operation)
+
 ## In Progress: Rules-Aligned Guided Flow Refactor
 
 - [x] Shared contracts overhaul (`packages/shared/src/types.ts`)

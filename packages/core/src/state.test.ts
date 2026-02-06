@@ -289,4 +289,76 @@ describe("core state reducer", () => {
     expect(reset.currentRoundIndex).toBe(0);
     expect(reset.question.index).toBe(1);
   });
+
+  it("jump-round resets to selected round standby state safely", () => {
+    let state = setupState(0);
+    state = reduceCommand(state, { type: "round:toggle" });
+    state = reduceCommand(state, { type: "flow:next" });
+    state = reduceCommand(state, { type: "score:increment", side: "left" });
+    state = reduceCommand(state, { type: "claim:manual-set", side: "left" });
+
+    const jumped = reduceCommand(state, { type: "flow:jump-round", roundIndex: 4 });
+    expect(jumped.currentRoundIndex).toBe(4);
+    expect(jumped.question.index).toBe(5);
+    expect(jumped.phase).toBe("round-running:standby");
+    expect(jumped.questionKind).toBe("tossup");
+    expect(jumped.questionTimer.running).toBe(false);
+    expect(jumped.questionTimer.secondsRemaining).toBe(0);
+    expect(jumped.claimOwner).toBe("none");
+    expect(jumped.question.prompt).toBe("Awaiting next phase");
+    expect(jumped.leftTeam.score).toBe(1);
+  });
+
+  it("override-next force-advances when normal flow is blocked", () => {
+    let state = setupState(0);
+    state = reduceCommand(state, { type: "round:toggle" });
+    state = reduceCommand(state, { type: "flow:next" });
+
+    // Simulate a stuck active state with round timer paused.
+    state = { ...state, roundTimer: { ...state.roundTimer, running: false } };
+    const normalNext = reduceCommand(state, { type: "flow:next" });
+    expect(normalNext.phase).toBe("tossup:active");
+
+    const forced = reduceCommand(state, { type: "flow:override-next" });
+    expect(forced.phase).toBe("answer:eligible");
+    expect(forced.postAnswerTarget).toBe("followup-standby");
+    expect(forced.roundTimer.running).toBe(true);
+  });
+
+  it("round timer hitting zero does not auto-change phase or question timer state", () => {
+    let state = setupState(0);
+    state = reduceCommand(state, { type: "round:toggle" });
+    state = reduceCommand(state, { type: "flow:next" });
+    state = {
+      ...state,
+      roundTimer: { ...state.roundTimer, secondsRemaining: 1, running: true },
+      questionTimer: { ...state.questionTimer, running: true, secondsRemaining: 30 }
+    };
+
+    const ticked = reduceCommand(state, { type: "clock:tick", nowMs: state.lastUpdatedMs + 1500 });
+    expect(ticked.roundTimer.secondsRemaining).toBe(0);
+    expect(ticked.roundTimer.running).toBe(true);
+    expect(ticked.phase).toBe("tossup:active");
+    expect(ticked.questionTimer.running).toBe(true);
+  });
+
+  it("switch-claim keeps follow-up correct/incorrect path usable", () => {
+    let state = setupState(0);
+    state = reduceCommand(state, { type: "round:toggle" });
+    state = reduceCommand(state, { type: "flow:next" });
+    state = reduceCommand(state, { type: "flow:claim-left" });
+    state = reduceCommand(state, { type: "flow:tossup-correct", side: "left" });
+    state = { ...state, revealHoldStartedAtMs: state.lastUpdatedMs - 1500 };
+    state = reduceCommand(state, { type: "flow:reveal-hold-complete" });
+    state = reduceCommand(state, { type: "flow:next" });
+    state = reduceCommand(state, { type: "flow:next" });
+
+    const switched = reduceCommand(state, { type: "flow:switch-claim" });
+    expect(switched.phase).toBe("followup:active-claimed-right");
+    expect(switched.claimOwner).toBe("right");
+
+    const rightCorrect = reduceCommand(switched, { type: "flow:followup-correct", side: "right" });
+    expect(rightCorrect.phase).toBe("answer:eligible");
+    expect(rightCorrect.rightTeam.score).toBe(2);
+  });
 });

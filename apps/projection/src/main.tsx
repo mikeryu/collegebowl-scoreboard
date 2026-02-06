@@ -23,15 +23,170 @@ const escapeTeXText = (text: string): string =>
     .replace(/~/g, "\\textasciitilde{}")
     .replace(/\n/g, "\\\\ ");
 
+const wrapPlainTextLines = (text: string, maxCharsPerLine: number = 52): string[] => {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [];
+
+  const lines: string[] = [];
+  let current = words[0];
+
+  for (let i = 1; i < words.length; i += 1) {
+    const next = `${current} ${words[i]}`;
+    if (next.length <= maxCharsPerLine) {
+      current = next;
+    } else {
+      lines.push(current);
+      current = words[i];
+    }
+  }
+  lines.push(current);
+  return lines;
+};
+
+const GAME_ENVIRONMENTS = ["tossup", "followup", "answer", "solution", "emceenotes"] as const;
+const GAME_ENV_PATTERN = new RegExp(
+  String.raw`\\begin\{(${GAME_ENVIRONMENTS.join("|")})\}([\s\S]*?)\\end\{\1\}`,
+  "gi"
+);
+const ORPHAN_GAME_ENV_TAG_PATTERN = new RegExp(
+  String.raw`\\(begin|end)\{(${GAME_ENVIRONMENTS.join("|")})\}`,
+  "gi"
+);
+
+const stripGameEnvironmentWrappers = (text: string): string => {
+  let next = text;
+  let previous = "";
+  while (next !== previous) {
+    previous = next;
+    next = next.replace(GAME_ENV_PATTERN, (_match, _env, inner) => `${String(inner).trim()}\n`);
+  }
+  return next.replace(ORPHAN_GAME_ENV_TAG_PATTERN, "").trim();
+};
+
+const hasComplexTeXStructure = (text: string): boolean =>
+  /\\begin\{(?!matrix|pmatrix|bmatrix|Bmatrix|vmatrix|Vmatrix|cases|array)[^}]+\}/.test(text);
+
+type Segment = { kind: "text"; value: string } | { kind: "math"; value: string };
+
+const MATH_SEGMENT_PATTERN = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\$[^$\n]+\$|\\\([\s\S]+?\\\))/g;
+
+const splitMixedSegments = (line: string): Segment[] => {
+  const segments: Segment[] = [];
+  let cursor = 0;
+
+  line.replace(MATH_SEGMENT_PATTERN, (match, _group, offset: number) => {
+    if (offset > cursor) {
+      segments.push({ kind: "text", value: line.slice(cursor, offset) });
+    }
+    segments.push({ kind: "math", value: match });
+    cursor = offset + match.length;
+    return match;
+  });
+
+  if (cursor < line.length) {
+    segments.push({ kind: "text", value: line.slice(cursor) });
+  }
+
+  return segments;
+};
+
+const wrapMixedLine = (line: string, maxCharsPerLine: number = 52): string[] => {
+  const segments = splitMixedSegments(line);
+  const tokens: string[] = [];
+
+  for (const segment of segments) {
+    if (segment.kind === "math") {
+      const math = segment.value.trim();
+      if (math) tokens.push(math);
+      continue;
+    }
+
+    const words = segment.value.trim().split(/\s+/).filter(Boolean);
+    if (words.length > 0) tokens.push(...words);
+  }
+
+  if (tokens.length === 0) return [];
+
+  const lines: string[] = [];
+  let current = "";
+
+  for (const token of tokens) {
+    const tokenWeight = /^\$|^\\\(|^\\\[/.test(token) ? Math.max(8, Math.floor(token.length * 0.3)) : token.length;
+    const currentWeight = current.length;
+    const nextWeight = currentWeight === 0 ? tokenWeight : currentWeight + 1 + tokenWeight;
+
+    if (current && nextWeight > maxCharsPerLine) {
+      lines.push(current);
+      current = token;
+    } else {
+      current = current ? `${current} ${token}` : token;
+    }
+  }
+
+  if (current) lines.push(current);
+  return lines;
+};
+
+const unwrapMathDelimiters = (value: string): string => {
+  if (value.startsWith("$$") && value.endsWith("$$")) return value.slice(2, -2).trim();
+  if (value.startsWith("\\[") && value.endsWith("\\]")) return value.slice(2, -2).trim();
+  if (value.startsWith("$") && value.endsWith("$")) return value.slice(1, -1).trim();
+  if (value.startsWith("\\(") && value.endsWith("\\)")) return value.slice(2, -2).trim();
+  return value.trim();
+};
+
+const convertMixedLineToTeX = (line: string): string => {
+  const segments = splitMixedSegments(line);
+  const parts: string[] = [];
+
+  for (const segment of segments) {
+    if (segment.kind === "math") {
+      const math = unwrapMathDelimiters(segment.value);
+      if (math) parts.push(math);
+      continue;
+    }
+
+    const textChunk = segment.value;
+    if (!textChunk.trim()) {
+      if (textChunk.length > 0) parts.push("\\,");
+      continue;
+    }
+
+    parts.push(`\\text{${escapeTeXText(textChunk)}}`);
+  }
+
+  return parts.join(" ");
+};
+
 const normalizeTeX = (text: string): string => {
   const trimmed = text.trim();
   if (!trimmed) return "";
 
-  const hasTeXSyntax = /\\begin\{|\\[a-zA-Z]+|\$\$?|\\\(|\\\[/.test(trimmed);
-  if (hasTeXSyntax) return trimmed;
+  const sanitized = stripGameEnvironmentWrappers(trimmed);
+  if (!sanitized) return "";
 
-  return `\\[\\text{${escapeTeXText(trimmed)}}\\]`;
+  if (hasComplexTeXStructure(sanitized)) return sanitized;
+
+  const hasTeXSyntax = /\\[a-zA-Z]+|\$\$?|\\\(|\\\[/.test(sanitized);
+  const hasExplicitMathDelimiters = /\$\$?|\\\(|\\\[/.test(sanitized);
+
+  if (hasTeXSyntax && !hasExplicitMathDelimiters) return sanitized;
+
+  const sourceLines = hasExplicitMathDelimiters
+    ? sanitized
+        .split(/\n+/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .flatMap((line) => wrapMixedLine(line, 52))
+    : wrapPlainTextLines(sanitized, 52);
+
+  if (sourceLines.length === 0) return "";
+  const texLines = sourceLines.map((line) => convertMixedLineToTeX(line)).filter(Boolean).join(" \\\\ ");
+  if (!texLines) return "";
+  return `\\[\\begin{array}{@{}l@{}}${texLines}\\end{array}\\]`;
 };
+
+const normalizeDisplayAnswer = (text: string): string => text.trim().replace(/\.\s*$/, "");
 
 function FullTeX({ text }: { text: string }) {
   const source = normalizeTeX(text);
@@ -107,17 +262,32 @@ function App() {
   const displayPrompt = !state.started
     ? "Awaiting game start"
     : state.question.prompt || "Awaiting question content";
-  const questionKindLabel = state.questionKind === "followup" ? "FOLLOW-UP" : "TOSS-UP";
+  const activeQuestionPhases: AppState["phase"][] = [
+    "tossup:active",
+    "tossup:review",
+    "followup:active-open",
+    "followup:active-claimed-left",
+    "followup:active-claimed-right",
+    "followup:review",
+    "answer:eligible",
+    "answer:revealed"
+  ];
+  const showingQuestion = activeQuestionPhases.includes(state.phase);
+  const questionKindLabel = !showingQuestion ? "STANDBY" : state.questionKind === "followup" ? "FOLLOW-UP" : "TOSS-UP";
+  const questionKindClass = !showingQuestion ? "standby" : state.questionKind === "followup" ? "followup" : "tossup";
 
   const isEmptyPrompt = displayPrompt.trim().toLowerCase().includes("awaiting");
+  const isAwaitingNextPhase = displayPrompt.trim().toLowerCase() === "awaiting next phase";
+  const promptLength = displayPrompt.trim().length;
+  const promptDensityClass = promptLength > 420 ? "ultra-dense" : promptLength > 260 ? "dense" : "";
   const answerVisible = state.question.displayMode === "answer-revealed" || state.question.displayMode === "solution-revealed";
 
   const answerBody = answerVisible ? (
     <div className="answer-content">
-      <FullTeX text={state.question.answer} />
+      <FullTeX text={normalizeDisplayAnswer(state.question.answer)} />
       {state.question.displayMode === "solution-revealed" && state.question.solution ? (
         <div className="answer-solution">
-          <FullTeX text={state.question.solution} />
+          <FullTeX text={normalizeDisplayAnswer(state.question.solution)} />
         </div>
       ) : null}
     </div>
@@ -136,6 +306,20 @@ function App() {
             ["\\[", "\\]"]
           ],
           processEscapes: true
+        },
+        chtml: {
+          displayOverflow: "linebreak",
+          linebreaks: {
+            automatic: true,
+            width: "container"
+          }
+        },
+        svg: {
+          displayOverflow: "linebreak",
+          linebreaks: {
+            automatic: true,
+            width: "container"
+          }
         }
       }}
     >
@@ -175,13 +359,19 @@ function App() {
             </div>
           </section>
 
-          <section className={`problem-panel ${isEmptyPrompt ? "empty" : ""}`}>
-            <div className={`question-kind-banner ${state.questionKind === "followup" ? "followup" : "tossup"}`}>
+          <section className={`problem-panel ${isEmptyPrompt ? "empty" : ""} ${answerVisible ? "answer-visible" : ""}`}>
+            <div className={`question-kind-banner ${questionKindClass}`}>
               {questionKindLabel}
             </div>
             <p className="panel-label current-question-label">Current Question</p>
-            <div className="problem-prompt">
-              <FullTeX text={displayPrompt} />
+            <div className={`problem-prompt ${promptDensityClass}`}>
+              {isAwaitingNextPhase ? (
+                <div className="awaiting-spinner-wrap" aria-label="Awaiting next phase">
+                  <div className="awaiting-spinner" />
+                </div>
+              ) : (
+                <FullTeX text={displayPrompt} />
+              )}
             </div>
 
             <div className={`answer-drawer ${answerVisible ? "visible" : ""}`}>

@@ -56,6 +56,7 @@ export interface QuestionState {
 
 export interface AppState {
   phase: GamePhase;
+  projectionOpen: boolean;
   leftTeam: TeamState;
   rightTeam: TeamState;
   config: PregameConfig;
@@ -94,6 +95,7 @@ export type AppCommand =
   | { type: "claim:manual-set"; side: ClaimOwner }
   | { type: "question:set-content"; payload: Pick<QuestionState, "prompt" | "answer" | "solution"> }
   | { type: "flow:next" }
+  | { type: "flow:override-next" }
   | { type: "flow:tossup-correct"; side: TeamSide }
   | { type: "flow:tossup-incorrect"; side: TeamSide }
   | { type: "flow:tossup-timeout" }
@@ -109,6 +111,7 @@ export type AppCommand =
   | { type: "flow:reveal-hold-cancel" }
   | { type: "flow:reveal-hold-complete" }
   | { type: "flow:advance-round" }
+  | { type: "flow:jump-round"; roundIndex: number }
   | { type: "projection:open" }
   | { type: "projection:refresh" }
   | { type: "projection:reopen" }

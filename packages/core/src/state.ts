@@ -82,6 +82,7 @@ const canReveal = (state: AppState, atMs: number): boolean => {
 
 export const createInitialState = (seedNowMs: number = now()): AppState => ({
   phase: "idle",
+  projectionOpen: false,
   leftTeam: { name: "LEFT TEAM", score: 0, hasClaim: false },
   rightTeam: { name: "RIGHT TEAM", score: 0, hasClaim: false },
   config: { ...DEFAULT_CONFIG },
@@ -287,6 +288,87 @@ export const reduceCommand = (previous: AppState, command: AppCommand): AppState
       break;
     }
 
+    case "flow:override-next": {
+      state.started = true;
+      if (!state.roundTimer.running && state.roundTimer.secondsRemaining > 0) {
+        state.roundTimer.running = true;
+      }
+
+      if (state.phase === "answer:revealed") {
+        state.revealEligible = false;
+        state.revealHoldStartedAtMs = null;
+        state.questionTimer.running = false;
+        clearQuestionContent(state);
+
+        if (state.postAnswerTarget === "followup-standby") {
+          state.questionKind = "followup";
+          state.eligibility.followupAttempted.left = false;
+          state.eligibility.followupAttempted.right = false;
+          setQuestionTimer(state, state.config.followupLengthSeconds, false);
+          state.postAnswerTarget = "none";
+          setPhase(state, "followup:standby");
+        } else {
+          state.currentRoundIndex += 1;
+          state.question.index = state.currentRoundIndex + 1;
+          state.postAnswerTarget = "none";
+          setClaim(state, "none");
+          clearEligibility(state);
+          state.questionTimer.secondsRemaining = 0;
+          setPhase(state, state.roundTimer.running ? "round-running:standby" : "round-paused");
+        }
+        break;
+      }
+
+      if (state.phase === "answer:eligible") {
+        state.revealEligible = true;
+        state.question.displayMode = "answer-revealed";
+        state.revealHoldStartedAtMs = null;
+        setPhase(state, "answer:revealed");
+        break;
+      }
+
+      if (state.phase === "followup:standby") {
+        if (state.questionTimer.secondsRemaining <= 0) {
+          setQuestionTimer(state, state.config.followupLengthSeconds, true);
+        } else {
+          state.questionTimer.running = true;
+        }
+        if (state.claimOwner === "left") {
+          setPhase(state, "followup:active-claimed-left");
+        } else if (state.claimOwner === "right") {
+          setPhase(state, "followup:active-claimed-right");
+        } else {
+          setPhase(state, "followup:active-open");
+        }
+        break;
+      }
+
+      if (
+        state.phase === "followup:active-open" ||
+        state.phase === "followup:active-claimed-left" ||
+        state.phase === "followup:active-claimed-right" ||
+        state.phase === "followup:review"
+      ) {
+        enterAnswerEligible(state, "round-standby");
+        break;
+      }
+
+      if (state.phase === "tossup:active" || state.phase === "tossup:review") {
+        enterAnswerEligible(state, "followup-standby");
+        break;
+      }
+
+      state.questionKind = "tossup";
+      setClaim(state, "none");
+      state.eligibility.tossupAttempted.left = false;
+      state.eligibility.tossupAttempted.right = false;
+      state.revealEligible = false;
+      state.question.displayMode = "prompt";
+      setQuestionTimer(state, state.config.tossupLengthSeconds, true);
+      setPhase(state, "tossup:active");
+      break;
+    }
+
     case "flow:claim-left":
     case "flow:claim-right": {
       const side: TeamSide = command.type === "flow:claim-left" ? "left" : "right";
@@ -390,11 +472,10 @@ export const reduceCommand = (previous: AppState, command: AppCommand): AppState
     case "flow:switch-claim": {
       if (!["followup:active-claimed-left", "followup:active-claimed-right"].includes(state.phase)) break;
       if (state.claimOwner === "none") break;
-      state.eligibility.followupAttempted[state.claimOwner] = true;
       const other = otherSide(state.claimOwner);
-      const otherEligible = !state.eligibility.followupAttempted[other] && state.questionTimer.secondsRemaining > 0;
-      if (!otherEligible) break;
-      enterFollowupClaimed(state, other, false);
+      // Manual override: always switch claim ownership to keep adjudication controls available.
+      setClaim(state, other);
+      setPhase(state, other === "left" ? "followup:active-claimed-left" : "followup:active-claimed-right");
       break;
     }
 
@@ -432,6 +513,28 @@ export const reduceCommand = (previous: AppState, command: AppCommand): AppState
       break;
     }
 
+    case "flow:jump-round": {
+      const target = Math.max(0, Math.floor(command.roundIndex));
+      state.currentRoundIndex = target;
+      state.question.index = target + 1;
+      state.questionKind = "tossup";
+      state.questionTimer.running = false;
+      state.questionTimer.durationSeconds = state.config.tossupLengthSeconds;
+      state.questionTimer.secondsRemaining = 0;
+      state.revealEligible = false;
+      state.revealHoldStartedAtMs = null;
+      state.postAnswerTarget = "none";
+      setClaim(state, "none");
+      clearEligibility(state);
+      clearQuestionContent(state, state.started ? "Awaiting next phase" : "Awaiting game start");
+      if (state.roundTimer.running) {
+        setPhase(state, "round-running:standby");
+      } else {
+        setPhase(state, state.started ? "round-paused" : "pregame-ready");
+      }
+      break;
+    }
+
     case "projection:open":
     case "projection:refresh":
     case "projection:reopen": {
@@ -447,11 +550,6 @@ export const reduceCommand = (previous: AppState, command: AppCommand): AppState
       if (elapsed > 0) {
         if (state.roundTimer.running) {
           state.roundTimer.secondsRemaining = clampNonNegative(state.roundTimer.secondsRemaining - elapsed);
-          if (state.roundTimer.secondsRemaining === 0) {
-            state.roundTimer.running = false;
-            state.questionTimer.running = false;
-            setPhase(state, "round-ended");
-          }
         }
 
         if (state.questionTimer.running) {
