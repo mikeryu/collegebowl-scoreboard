@@ -1,0 +1,64 @@
+{
+  "name": "scoreboard",
+  "version": "0.1.0",
+  "private": true,
+  "main": "apps/main/src/main.cjs",
+  "description": "Westmont Math Field Day Scoreboard v2",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun run --filter @scoreboard/main dev",
+    "dev:main": "bun run --filter @scoreboard/main dev",
+    "dev:control": "bun run --filter @scoreboard/control dev",
+    "dev:projection": "bun run --filter @scoreboard/projection dev",
+    "build": "bun run --filter @scoreboard/shared build && bun run --filter @scoreboard/core build && bun run --filter @scoreboard/control build && bun run --filter @scoreboard/projection build && bun run --filter @scoreboard/main build",
+    "typecheck": "bun run --filter @scoreboard/shared typecheck && bun run --filter @scoreboard/core typecheck && bun run --filter @scoreboard/control typecheck && bun run --filter @scoreboard/projection typecheck && bun run --filter @scoreboard/main typecheck",
+    "lint": "bunx eslint apps packages eslint.config.mjs",
+    "format": "bunx prettier --write .",
+    "format:check": "bunx prettier --check .",
+    "test": "bun run --filter @scoreboard/core test",
+    "ci": "bun run lint && bun run typecheck && bun run test && bun run build",
+    "package:mac:unsigned": "bun run build && bunx electron-builder --mac zip --publish never"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.20.0",
+    "electron-builder": "^24.13.3",
+    "eslint": "^9.20.1",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^15.14.0",
+    "prettier": "^3.5.1",
+    "typescript-eslint": "^8.24.1",
+    "vitest": "^3.0.6"
+  },
+  "build": {
+    "appId": "edu.westmont.scoreboard",
+    "productName": "Scoreboard",
+    "electronVersion": "34.5.8",
+    "directories": {
+      "output": "dist/mac-unsigned"
+    },
+    "files": [
+      "apps/main/src/**",
+      "apps/control/dist/**",
+      "apps/projection/dist/**",
+      "package.json"
+    ],
+    "asar": true,
+    "npmRebuild": false,
+    "mac": {
+      "target": [
+        "zip"
+      ],
+      "artifactName": "${productName}-${version}-mac-unsigned-${arch}.${ext}",
+      "category": "public.app-category.education",
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    }
+  }
+}

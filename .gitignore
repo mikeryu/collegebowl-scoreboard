@@ -1,2 +1,14 @@
 .DS_Store
 .idea
+.ocr
+node_modules
+dist
+build
+out
+coverage
+*.log
+.vite
+.terraform
+.env
+.env.*
+!.env.example
