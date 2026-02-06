@@ -1,0 +1,37 @@
+\mode<presentation>
+
+
+\setbeamertemplate{background}{
+  \begin{tikzpicture}
+  \useasboundingbox (0,0) rectangle(\the\paperwidth,\the\paperheight);
+  \fill[color=medium] (0,2.4) rectangle (\the\paperwidth,\the\paperheight);
+  \fill[color=accent] (0,0) rectangle(2.95,2.2);
+  \fill[color=light] (3.05,0) rectangle(\the\paperwidth,2.2);
+  \ifnum\thepage>1\relax%
+   \fill[white,opacity=1] (0,0) rectangle(\the\paperwidth,\the\paperheight);
+   \fi
+  \end{tikzpicture}
+}
+
+% Title page
+\defbeamertemplate*{title page}{kh}[1][]
+{ 
+   \vskip5.5cm%
+    \begin{beamercolorbox}[wd=12cm,leftskip=3cm,sep=8pt,#1]{title page header}
+      \usebeamerfont{title}\inserttitle\par%
+    \end{beamercolorbox}%
+    \vskip0.5cm%
+    \begin{beamercolorbox}[wd=12cm,leftskip=3cm,#1]{author}
+      \usebeamerfont{author}\insertauthor%
+    \end{beamercolorbox}
+     \vskip0.2cm%
+    \begin{beamercolorbox}[wd=12cm,leftskip=3cm,#1]{date}
+      \usebeamerfont{author}\insertdate%
+    \end{beamercolorbox}
+  \vfill
+}
+
+\setbeamertemplate{enumerate items}[square]
+\setbeamertemplate{itemize items}{\textcolor{accent}{$\RHD$}}
+\setbeamertemplate{qed symbol}{\textcolor{accent}{$\blacksquare$}}
+%\setbeamertemplate{background canvas}[vertical shading][bottom=pale!85!black,top=pale!90!black]
