@@ -362,6 +362,10 @@ Current phase: `Phase 2 - Feature Hardening`
 
 - [x] Remove `\allowbreak` injection from projection mixed-math normalization to prevent literal render artifacts
 
+## In Progress: Main Artifact Refresh
+
+- [x] Rebuild and refresh root unsigned macOS zip artifact after `\allowbreak` fix
+
 ## In Progress: Round Expiry + Switch Claim Stability
 
 - [x] Prevent round timer expiry from auto-changing game phase/state
