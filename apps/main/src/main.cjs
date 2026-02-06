@@ -92,6 +92,7 @@ function initialState() {
 
   return {
     phase: "idle",
+    projectionOpen: false,
     leftTeam: { name: "LEFT TEAM", score: 0, hasClaim: false },
     rightTeam: { name: "RIGHT TEAM", score: 0, hasClaim: false },
     config: { ...DEFAULT_CONFIG },
@@ -310,6 +311,87 @@ function reduceCommand(previous, command) {
       break;
     }
 
+    case "flow:override-next": {
+      nextState.started = true;
+      if (!nextState.roundTimer.running && nextState.roundTimer.secondsRemaining > 0) {
+        nextState.roundTimer.running = true;
+      }
+
+      if (nextState.phase === "answer:revealed") {
+        nextState.revealEligible = false;
+        nextState.revealHoldStartedAtMs = null;
+        nextState.questionTimer.running = false;
+        clearQuestionContent(nextState);
+
+        if (nextState.postAnswerTarget === "followup-standby") {
+          nextState.questionKind = "followup";
+          nextState.eligibility.followupAttempted.left = false;
+          nextState.eligibility.followupAttempted.right = false;
+          setQuestionTimer(nextState, nextState.config.followupLengthSeconds, false);
+          nextState.postAnswerTarget = "none";
+          nextState.phase = "followup:standby";
+        } else {
+          nextState.currentRoundIndex += 1;
+          nextState.question.index = nextState.currentRoundIndex + 1;
+          nextState.postAnswerTarget = "none";
+          setClaim(nextState, "none");
+          clearEligibility(nextState);
+          nextState.questionTimer.secondsRemaining = 0;
+          nextState.phase = nextState.roundTimer.running ? "round-running:standby" : "round-paused";
+        }
+        break;
+      }
+
+      if (nextState.phase === "answer:eligible") {
+        nextState.revealEligible = true;
+        nextState.question.displayMode = "answer-revealed";
+        nextState.revealHoldStartedAtMs = null;
+        nextState.phase = "answer:revealed";
+        break;
+      }
+
+      if (nextState.phase === "followup:standby") {
+        if (nextState.questionTimer.secondsRemaining <= 0) {
+          setQuestionTimer(nextState, nextState.config.followupLengthSeconds, true);
+        } else {
+          nextState.questionTimer.running = true;
+        }
+        if (nextState.claimOwner === "left") {
+          nextState.phase = "followup:active-claimed-left";
+        } else if (nextState.claimOwner === "right") {
+          nextState.phase = "followup:active-claimed-right";
+        } else {
+          nextState.phase = "followup:active-open";
+        }
+        break;
+      }
+
+      if (
+        nextState.phase === "followup:active-open" ||
+        nextState.phase === "followup:active-claimed-left" ||
+        nextState.phase === "followup:active-claimed-right" ||
+        nextState.phase === "followup:review"
+      ) {
+        enterAnswerEligible(nextState, "round-standby");
+        break;
+      }
+
+      if (nextState.phase === "tossup:active" || nextState.phase === "tossup:review") {
+        enterAnswerEligible(nextState, "followup-standby");
+        break;
+      }
+
+      nextState.questionKind = "tossup";
+      setClaim(nextState, "none");
+      nextState.eligibility.tossupAttempted.left = false;
+      nextState.eligibility.tossupAttempted.right = false;
+      nextState.revealEligible = false;
+      nextState.question.displayMode = "prompt";
+      setQuestionTimer(nextState, nextState.config.tossupLengthSeconds, true);
+      nextState.phase = "tossup:active";
+      break;
+    }
+
     case "flow:claim-left":
     case "flow:claim-right": {
       const side = command.type === "flow:claim-left" ? "left" : "right";
@@ -446,11 +528,10 @@ function reduceCommand(previous, command) {
     case "flow:switch-claim": {
       if (!["followup:active-claimed-left", "followup:active-claimed-right"].includes(nextState.phase)) break;
       if (nextState.claimOwner === "none") break;
-      nextState.eligibility.followupAttempted[nextState.claimOwner] = true;
       const other = otherSide(nextState.claimOwner);
-      const otherEligible = !nextState.eligibility.followupAttempted[other] && nextState.questionTimer.secondsRemaining > 0;
-      if (!otherEligible) break;
-      enterFollowupClaimed(nextState, other, false);
+      // Manual override: always switch claim ownership to keep adjudication controls available.
+      setClaim(nextState, other);
+      nextState.phase = other === "left" ? "followup:active-claimed-left" : "followup:active-claimed-right";
       break;
     }
 
@@ -495,6 +576,28 @@ function reduceCommand(previous, command) {
       break;
     }
 
+    case "flow:jump-round": {
+      const target = Math.max(0, Math.floor(command.roundIndex));
+      nextState.currentRoundIndex = target;
+      nextState.question.index = target + 1;
+      nextState.questionKind = "tossup";
+      nextState.questionTimer.running = false;
+      nextState.questionTimer.durationSeconds = nextState.config.tossupLengthSeconds;
+      nextState.questionTimer.secondsRemaining = 0;
+      nextState.revealEligible = false;
+      nextState.revealHoldStartedAtMs = null;
+      nextState.postAnswerTarget = "none";
+      setClaim(nextState, "none");
+      clearEligibility(nextState);
+      clearQuestionContent(nextState, nextState.started ? "Awaiting next phase" : "Awaiting game start");
+      if (nextState.roundTimer.running) {
+        nextState.phase = "round-running:standby";
+      } else {
+        nextState.phase = nextState.started ? "round-paused" : "pregame-ready";
+      }
+      break;
+    }
+
     case "projection:open":
     case "projection:refresh":
     case "projection:reopen": {
@@ -511,11 +614,6 @@ function reduceCommand(previous, command) {
       if (elapsed > 0) {
         if (nextState.roundTimer.running) {
           nextState.roundTimer.secondsRemaining = clampNonNegative(nextState.roundTimer.secondsRemaining - elapsed);
-          if (nextState.roundTimer.secondsRemaining === 0) {
-            nextState.roundTimer.running = false;
-            nextState.questionTimer.running = false;
-            nextState.phase = "round-ended";
-          }
         }
 
         if (nextState.questionTimer.running) {
@@ -585,6 +683,7 @@ function createControlWindow() {
 
 function createProjectionWindow() {
   if (projectionWindow && !projectionWindow.isDestroyed()) {
+    state.projectionOpen = true;
     projectionWindow.show();
     projectionWindow.focus();
     broadcastState();
@@ -608,7 +707,11 @@ function createProjectionWindow() {
   projectionWindow.webContents.on("did-finish-load", broadcastState);
   projectionWindow.on("closed", () => {
     projectionWindow = null;
+    state.projectionOpen = false;
+    broadcastState();
   });
+  state.projectionOpen = true;
+  broadcastState();
 }
 
 function handleProjectionWindowCommand(type) {
@@ -631,6 +734,9 @@ function handleProjectionWindowCommand(type) {
   if (type === "projection:close") {
     if (projectionWindow && !projectionWindow.isDestroyed()) {
       projectionWindow.close();
+    } else {
+      state.projectionOpen = false;
+      broadcastState();
     }
     return true;
   }

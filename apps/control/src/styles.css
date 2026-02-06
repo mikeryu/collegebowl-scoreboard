@@ -319,6 +319,20 @@ button.primary {
   min-height: 1.6rem;
 }
 
+.projector-controls {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.game-controls {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.projector-controls .open-projector-btn {
+  background: linear-gradient(160deg, rgba(157, 34, 53, 0.98), rgba(111, 22, 39, 0.98));
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
 .game-controls .round-toggle-btn.start-mode {
   background: linear-gradient(160deg, rgba(157, 34, 53, 0.98), rgba(111, 22, 39, 0.98));
   border-color: rgba(255, 255, 255, 0.25);
@@ -456,6 +470,19 @@ button.primary {
   box-shadow: 0 0 0 2px rgba(245, 209, 92, 0.38);
 }
 
+.reveal-hold.override-hold-btn {
+  min-height: 2rem;
+  padding: 0.3rem 0.45rem;
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #d4dbe7;
+}
+
+.reveal-hold.override-hold-btn .hold-label {
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+}
+
 .right-column {
   display: grid;
   grid-template-rows: auto 1fr auto auto;
@@ -468,6 +495,27 @@ button.primary {
   gap: 0.45rem;
   overflow: auto;
   max-height: 48vh;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(206, 184, 136, 0.35) rgba(255, 255, 255, 0.06);
+}
+
+.queue-list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.queue-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 999px;
+}
+
+.queue-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(206, 184, 136, 0.42), rgba(99, 102, 106, 0.55));
+  border-radius: 999px;
+  border: 2px solid rgba(18, 24, 33, 0.55);
+}
+
+.queue-list::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(206, 184, 136, 0.56), rgba(99, 102, 106, 0.72));
 }
 
 .queue-item {
@@ -494,6 +542,22 @@ button.primary {
   gap: 0.45rem;
 }
 
+.setup-file-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.queue-actions .use-now-hold-btn {
+  min-height: 1.9rem;
+  padding: 0.25rem 0.35rem;
+  border-color: rgba(206, 184, 136, 0.58);
+  background: rgba(206, 184, 136, 0.14);
+}
+
+.queue-actions .use-now-hold-btn .hold-label {
+  font-size: 0.76rem;
+  letter-spacing: 0.02em;
+}
+
 .queue-preview {
   border-top: 1px solid rgba(255, 255, 255, 0.16);
   padding-top: 0.5rem;
@@ -510,6 +574,11 @@ button.primary {
   margin: 0.2rem 0 0.6rem;
 }
 
+.setup-apply-btn {
+  width: 100%;
+  margin-top: 0.6rem;
+}
+
 .setup-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -521,6 +590,14 @@ button.primary {
   font-size: 0.8rem;
   margin-bottom: 0.15rem;
   color: var(--muted);
+}
+
+.setup-live-row {
+  margin-top: 0.55rem;
+}
+
+.setup-live-btn {
+  width: 100%;
 }
 
 input,
