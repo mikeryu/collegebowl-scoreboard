@@ -1,38 +1,15 @@
 # College Bowl Scoreboard (v3)
 
-Modern Electron + React scoreboard for live math/quiz events.
-
-This repo now runs a two-window system:
-- Control window (operator UI)
-- Projection window (audience-facing UI)
-
-The legacy single-page app files (`index.html`, `script.js`, `style.css`) are retained as fallback reference, but active development is on the v3 app under `apps/*` and `packages/*`.
-
-## Tech Stack
-
-- Electron (main process + desktop windows)
-- React + Vite (control and projection renderers)
-- TypeScript workspace monorepo
-- Bun workspaces
-- Vitest (core state reducer tests)
-
-## Repository Layout
-
-- `apps/main`: Electron main process and preload
-- `apps/control`: operator control UI
-- `apps/projection`: projector/audience UI
-- `packages/shared`: shared types + command contracts
-- `packages/core`: canonical reducer/state machine
-- `resources/`: reference docs and source game materials
-- `scoreboard-game-template.tex`: compilable game packet template
-- `TODOS.md`: implementation handoff log and progress
+Electron + React scoreboard for live quiz/math events with two windows:
+- Control (operator)
+- Projection (audience)
 
 ## Requirements
 
 - Node.js 20+
 - Bun
 
-## Setup
+## Install
 
 ```bash
 bun install
@@ -44,101 +21,63 @@ bun install
 bun run dev
 ```
 
-This starts:
-- Vite dev server for control (`127.0.0.1:5173`)
-- Vite dev server for projection (`127.0.0.1:5174`)
-- Electron app connected to both
+This launches:
+- Control renderer (`127.0.0.1:5173`)
+- Projection renderer (`127.0.0.1:5174`)
+- Electron main process
 
-## Quality Commands
+## Build/Validate
 
 ```bash
 bun run lint
 bun run typecheck
 bun run test
 bun run build
-bun run ci
 ```
 
-## Distribution (Unsigned macOS)
-
-Build an unsigned macOS zip artifact:
+## Package (Unsigned macOS)
 
 ```bash
 bun run package:mac:unsigned
 ```
 
-Output:
+Artifact:
 - `dist/mac-unsigned/Scoreboard-0.1.0-mac-unsigned-arm64.zip`
 
-Notes:
-- This build is unsigned and not notarized (intended for trusted/internal distribution).
-- Gatekeeper warnings are expected on first launch.
-
-First-run on recipient machine:
+First run on recipient Mac:
 1. Move `Scoreboard.app` to `/Applications`.
-2. Clear quarantine flag:
+2. Run:
 
 ```bash
 xattr -dr com.apple.quarantine "/Applications/Scoreboard.app"
 ```
 
-Alternative first-run:
-- Right-click app -> `Open` -> confirm.
+Unsigned/notarization note:
+- This is for trusted/internal distribution. Gatekeeper prompts are expected.
 
-If the app opens to a white screen, ensure you are using the latest packaged build produced after relative-asset packaging fixes.
+## Operator Workflow
 
-## Game Flow Model (Guided)
+1. Open `Setup` tab.
+2. Set team names/timers and load a `.tex` round file.
+3. Go to `Live`, open projector, and run game via on-screen state controls.
+4. Use `Full Reset` to return to pregame state (required to unlock non-name setup changes).
 
-The app uses a reducer-driven guided state machine. Operators mostly use contextual `Next`/branch actions.
+## `.tex` Round File Requirements
 
-Key behavior:
-- Toss-up -> review/adjudication -> reveal gate
-- Follow-up standby -> hold to show/start -> review/adjudication -> reveal gate
-- Long-press guards for dangerous reveal/reset actions
-- Timeout adjudication supports:
-  - Left correct
-  - Right correct
-  - No one answered
-- Claim ownership can be manually overridden from control top strip (exclusive)
+Each round must include:
+- `tossup`
+- `tossupanswer`
+- `followup`
+- `followupanswer`
 
-## Timing + Audio
+Optional:
+- `emceenotes` (ignored for gameplay content)
 
-- Warning beep at 10 seconds
-- Expired alarm at 00:00
-- Round pause pauses question timer
-- Round unpause does not auto-resume question timer
+Expected wrappers:
+- one `game`
+- one or more `round`
 
-## Projection Controls
+## Notes
 
-Projection window is controller-managed:
-- Open projector
-- Refresh projector
-- Hold-to-close projector
-
-## Question Pack Workflow (.tex)
-
-Use Setup tab:
-1. Download template
-2. Fill rounds in `.tex` (Overleaf-compatible)
-3. Upload `.tex`
-
-Parser expectations:
-- One `game` wrapper
-- One or more `round` blocks
-- Each `round` requires:
-  - `tossup`
-  - `tossupanswer`
-  - `followup`
-  - `followupanswer`
-- Optional `emceenotes` section per round is parsed but ignored for gameplay prompt/answer content
-
-## Keyboard Notes (Control)
-
-- `Esc`: pause/resume round timer
-- `Space`: pause/resume question timer
-- `A` + `W/S`: left score +/-
-- `D` + `W/S`: right score +/-
-
-## Current Status
-
-Core v3 architecture, guided flow engine, LaTeX rendering pipeline, and presenter/projection UX are implemented and validated through lint/typecheck/tests/build.
+- Keyboard shortcuts are not part of the current control surface; use on-screen controls.
+- Main code lives under `apps/*` and `packages/*`.

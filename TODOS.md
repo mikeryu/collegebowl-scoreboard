@@ -317,6 +317,12 @@ Current phase: `Phase 2 - Feature Hardening`
 - [x] Update README with unsigned distribution packaging/install instructions
 - [x] Commit and push latest changes directly to `main`
 
+## In Progress: README Accuracy Cleanup
+
+- [x] Remove outdated README content (including removed keyboard shortcuts)
+- [x] Make README concise and current for setup, run, packaging, and operation
+- [x] Push README cleanup to `main`
+
 ## In Progress: Round Expiry + Switch Claim Stability
 
 - [x] Prevent round timer expiry from auto-changing game phase/state
