@@ -165,9 +165,9 @@ Current phase: `Phase 2 - Feature Hardening`
 
 ## In Progress: Release Docs + PR
 
-- [ ] Update root `README.md` to match current v3 architecture and operations
-- [ ] Commit all changes and push branch
-- [ ] Open PR via `gh` with implementation summary and validation notes
+- [x] Update root `README.md` to match current v3 architecture and operations
+- [x] Commit all changes and push branch
+- [x] Open PR via `gh` with implementation summary and validation notes
 
 ## In Progress: Rules-Aligned Guided Flow Refactor
 
