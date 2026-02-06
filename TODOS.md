@@ -358,6 +358,10 @@ Current phase: `Phase 2 - Feature Hardening`
 - [x] Rebuild unsigned macOS distribution artifact after plaintext/TeX fix
 - [x] Create branch, commit, push, and open PR to `main`
 
+## In Progress: Remove Leaking `\allowbreak`
+
+- [x] Remove `\allowbreak` injection from projection mixed-math normalization to prevent literal render artifacts
+
 ## In Progress: Round Expiry + Switch Claim Stability
 
 - [x] Prevent round timer expiry from auto-changing game phase/state
