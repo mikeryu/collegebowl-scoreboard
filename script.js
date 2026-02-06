@@ -1,8 +1,8 @@
 /********** SCOREBOARD DEFAULT CONFIGURATION BELOW **********/
 
 // Default Timer Length Config (desired seconds - 1)
-const LONG_TIMER_SECS = 90 - 1;
-const SHORT_TIMER_SECS = 20 - 1;
+const LONG_TIMER_SECS = 120 - 1;
+const SHORT_TIMER_SECS = 45 - 1;
 
 // Default Team Name Config
 const DEFAULT_LEFT_TEAM_NAME = "LEFT<br>TEAM";
