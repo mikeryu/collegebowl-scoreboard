@@ -1,0 +1,9 @@
+node_modules
+coverage
+dist
+build
+out
+resources/Game-Problems-TEX
+README.pdf
+resources/Game-Flow.pdf
+resources/Game-Rules-Old.pdf

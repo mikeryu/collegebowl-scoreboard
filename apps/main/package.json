@@ -1,0 +1,22 @@
+{
+  "name": "@scoreboard/main",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k -n CONTROL,PROJECTION,ELECTRON -c green,blue,magenta \"bun run --filter @scoreboard/control dev\" \"bun run --filter @scoreboard/projection dev\" \"wait-on tcp:5173 tcp:5174 && cross-env CONTROL_URL=http://127.0.0.1:5173 PROJECTION_URL=http://127.0.0.1:5174 electron src/main.cjs\"",
+    "build": "echo \"apps/main build placeholder (Phase 0)\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@scoreboard/core": "0.1.0",
+    "@scoreboard/shared": "0.1.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^34.3.0",
+    "typescript": "^5.7.3",
+    "wait-on": "^8.0.1"
+  }
+}
