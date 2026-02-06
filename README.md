@@ -1,71 +1,67 @@
 # College Bowl Scoreboard (v3)
 
-Electron + React scoreboard for live quiz/math events with two windows:
-- Control (operator)
-- Projection (audience)
+Electron app for running a live two-screen game:
+- Control window (for moderator/operator)
+- Projection window (for audience)
 
-## Requirements
+Download and try:
+- [macOS app (.zip)](./Scoreboard-0.1.0-mac-unsigned-arm64.zip)
+- [sample game packet (.tex)](./scoreboard-sample-3-rounds.tex)
 
-- Node.js 20+
-- Bun
+## For Regular Users
 
-## Install
+### 1) Download
 
-```bash
-bun install
-```
+Download these files from the repository root:
+- `Scoreboard-0.1.0-mac-unsigned-arm64.zip`
+- `scoreboard-sample-3-rounds.tex` (optional sample question file)
 
-## Run (Development)
+### 2) Install and first launch (macOS)
 
-```bash
-bun run dev
-```
-
-This launches:
-- Control renderer (`127.0.0.1:5173`)
-- Projection renderer (`127.0.0.1:5174`)
-- Electron main process
-
-## Build/Validate
-
-```bash
-bun run lint
-bun run typecheck
-bun run test
-bun run build
-```
-
-## Package (Unsigned macOS)
-
-```bash
-bun run package:mac:unsigned
-```
-
-Artifact:
-- `dist/mac-unsigned/Scoreboard-0.1.0-mac-unsigned-arm64.zip`
-
-Download-and-try:
-- [Scoreboard-0.1.0-mac-unsigned-arm64.zip](./Scoreboard-0.1.0-mac-unsigned-arm64.zip)
-
-First run on recipient Mac:
-1. Move `Scoreboard.app` to `/Applications`.
-2. Run:
+1. Unzip `Scoreboard-0.1.0-mac-unsigned-arm64.zip`.
+2. Move `Scoreboard.app` to `/Applications`.
+3. Open Terminal and run:
 
 ```bash
 xattr -dr com.apple.quarantine "/Applications/Scoreboard.app"
 ```
 
-Unsigned/notarization note:
-- This is for trusted/internal distribution. Gatekeeper prompts are expected.
+4. Launch `Scoreboard.app`.
 
-## Operator Workflow
+Notes:
+- This app is unsigned/not notarized. macOS warnings are expected.
+- If needed, right-click app -> `Open` to approve launch.
 
-1. Open `Setup` tab.
-2. Set team names/timers and load a `.tex` round file.
-3. Go to `Live`, open projector, and run game via on-screen state controls.
-4. Use `Full Reset` to return to pregame state (required to unlock non-name setup changes).
+### 3) Initial setup before game start
 
-## `.tex` Round File Requirements
+1. App opens to the `Setup` tab.
+2. Enter:
+   - Left team name
+   - Right team name
+   - Round/toss-up/follow-up/warning times
+3. Load a `.tex` game file:
+   - Click `Load .tex`
+   - Select your packet (or `scoreboard-sample-3-rounds.tex`)
+4. Click `Apply Setup`.
+5. Click `Go To Live`.
+
+### 4) Start and run the game
+
+1. In `Live`, click `Open Projector`.
+2. Click `Start Round`.
+3. Use the large state buttons to progress:
+   - Show toss-up
+   - Record claim/correct/incorrect
+   - Reveal answer (hold action)
+   - Move to follow-up, then next round
+4. Use score +/- and manual claim controls when needed.
+
+Important behavior:
+- Once game has started, only team names can be changed from Setup.
+- Timer/config and question-file changes are locked until `Full Reset`.
+- Use `Full Reset` in Live to return to pregame and unlock full setup edits.
+
+### 5) Question file format requirements
 
 Each round must include:
 - `tossup`
@@ -74,13 +70,61 @@ Each round must include:
 - `followupanswer`
 
 Optional:
-- `emceenotes` (ignored for gameplay content)
+- `emceenotes` (ignored for displayed gameplay content)
 
-Expected wrappers:
-- one `game`
+Wrapper expectations:
+- exactly one `game`
 - one or more `round`
 
-## Notes
+## For Developers
 
-- Keyboard shortcuts are not part of the current control surface; use on-screen controls.
-- Main code lives under `apps/*` and `packages/*`.
+### Stack
+
+- Electron
+- React + Vite
+- TypeScript
+- Bun workspaces
+- Vitest (core reducer tests)
+
+### Repo layout
+
+- `apps/main`: Electron main/preload
+- `apps/control`: control renderer
+- `apps/projection`: projection renderer
+- `packages/shared`: shared types/contracts
+- `packages/core`: canonical reducer/state machine
+
+### Local setup
+
+```bash
+bun install
+```
+
+### Run in development
+
+```bash
+bun run dev
+```
+
+Starts:
+- control renderer on `127.0.0.1:5173`
+- projection renderer on `127.0.0.1:5174`
+- Electron main process
+
+### Validate
+
+```bash
+bun run lint
+bun run typecheck
+bun run test
+bun run build
+```
+
+### Build unsigned macOS package
+
+```bash
+bun run package:mac:unsigned
+```
+
+Output artifact:
+- `dist/mac-unsigned/Scoreboard-0.1.0-mac-unsigned-arm64.zip`
