@@ -59,6 +59,34 @@ bun run build
 bun run ci
 ```
 
+## Distribution (Unsigned macOS)
+
+Build an unsigned macOS zip artifact:
+
+```bash
+bun run package:mac:unsigned
+```
+
+Output:
+- `dist/mac-unsigned/Scoreboard-0.1.0-mac-unsigned-arm64.zip`
+
+Notes:
+- This build is unsigned and not notarized (intended for trusted/internal distribution).
+- Gatekeeper warnings are expected on first launch.
+
+First-run on recipient machine:
+1. Move `Scoreboard.app` to `/Applications`.
+2. Clear quarantine flag:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/Scoreboard.app"
+```
+
+Alternative first-run:
+- Right-click app -> `Open` -> confirm.
+
+If the app opens to a white screen, ensure you are using the latest packaged build produced after relative-asset packaging fixes.
+
 ## Game Flow Model (Guided)
 
 The app uses a reducer-driven guided state machine. Operators mostly use contextual `Next`/branch actions.

@@ -312,6 +312,11 @@ Current phase: `Phase 2 - Feature Hardening`
 - [x] Repackage unsigned macOS artifact after lint fix
 - [x] Commit and push release-sync changes
 
+## In Progress: README Distribution Update + Main Push
+
+- [ ] Update README with unsigned distribution packaging/install instructions
+- [ ] Commit and push latest changes directly to `main`
+
 ## In Progress: Round Expiry + Switch Claim Stability
 
 - [x] Prevent round timer expiry from auto-changing game phase/state
