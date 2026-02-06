@@ -7,8 +7,8 @@ app.commandLine.appendSwitch("disable-background-timer-throttling");
 app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
 app.commandLine.appendSwitch("disable-features", "CalculateNativeWinOcclusion");
 
-const CONTROL_URL = process.env.CONTROL_URL || "http://127.0.0.1:5173";
-const PROJECTION_URL = process.env.PROJECTION_URL || "http://127.0.0.1:5174";
+const CONTROL_URL = process.env.CONTROL_URL;
+const PROJECTION_URL = process.env.PROJECTION_URL;
 
 const IPC_CHANNELS = {
   getState: "scoreboard:get-state",
@@ -149,6 +149,7 @@ function reduceCommand(previous, command) {
     case "setup:apply": {
       nextState.leftTeam.name = command.payload.leftTeamName.trim() || nextState.leftTeam.name;
       nextState.rightTeam.name = command.payload.rightTeamName.trim() || nextState.rightTeam.name;
+      if (nextState.started) break;
 
       nextState.config.roundLengthSeconds = clampNonNegative(command.payload.roundLengthSeconds);
       nextState.config.tossupLengthSeconds = clampNonNegative(command.payload.tossupLengthSeconds);
@@ -677,7 +678,11 @@ function createControlWindow() {
       backgroundThrottling: false
     }
   });
-  controlWindow.loadURL(CONTROL_URL);
+  if (CONTROL_URL) {
+    controlWindow.loadURL(CONTROL_URL);
+  } else {
+    controlWindow.loadFile(path.join(app.getAppPath(), "apps", "control", "dist", "index.html"));
+  }
   controlWindow.webContents.on("did-finish-load", broadcastState);
 }
 
@@ -702,7 +707,11 @@ function createProjectionWindow() {
     }
   });
 
-  projectionWindow.loadURL(PROJECTION_URL);
+  if (PROJECTION_URL) {
+    projectionWindow.loadURL(PROJECTION_URL);
+  } else {
+    projectionWindow.loadFile(path.join(app.getAppPath(), "apps", "projection", "dist", "index.html"));
+  }
   projectionWindow.webContents.setBackgroundThrottling(false);
   projectionWindow.webContents.on("did-finish-load", broadcastState);
   projectionWindow.on("closed", () => {

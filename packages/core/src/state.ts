@@ -128,6 +128,7 @@ export const reduceCommand = (previous: AppState, command: AppCommand): AppState
     case "setup:apply": {
       state.leftTeam.name = command.payload.leftTeamName.trim() || state.leftTeam.name;
       state.rightTeam.name = command.payload.rightTeamName.trim() || state.rightTeam.name;
+      if (state.started) break;
 
       state.config.roundLengthSeconds = clampNonNegative(command.payload.roundLengthSeconds);
       state.config.tossupLengthSeconds = clampNonNegative(command.payload.tossupLengthSeconds);
