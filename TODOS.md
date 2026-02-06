@@ -314,8 +314,8 @@ Current phase: `Phase 2 - Feature Hardening`
 
 ## In Progress: README Distribution Update + Main Push
 
-- [ ] Update README with unsigned distribution packaging/install instructions
-- [ ] Commit and push latest changes directly to `main`
+- [x] Update README with unsigned distribution packaging/install instructions
+- [x] Commit and push latest changes directly to `main`
 
 ## In Progress: Round Expiry + Switch Claim Stability
 
