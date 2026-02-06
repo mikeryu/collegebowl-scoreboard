@@ -329,6 +329,21 @@ Current phase: `Phase 2 - Feature Hardening`
 - [x] Add direct download-and-try link in README to root artifact
 - [x] Commit and push to `main`
 
+## In Progress: README Top CTA + Sample Packet
+
+- [x] Move distribution download link to the top of README for prominence
+- [x] Add a root-level 3-round sample `.tex` packet
+- [x] Add adjacent README link to the sample `.tex` packet
+
+## In Progress: Sample Packet Content Safety
+
+- [x] Replace sample packet problems with middle-school-level math only
+
+## In Progress: README Audience Split
+
+- [x] Restructure README into separate Regular User and Developer sections
+- [x] Expand Regular User instructions for download, first launch, setup, and running a game
+
 ## In Progress: Round Expiry + Switch Claim Stability
 
 - [x] Prevent round timer expiry from auto-changing game phase/state
