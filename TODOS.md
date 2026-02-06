@@ -346,7 +346,7 @@ Current phase: `Phase 2 - Feature Hardening`
 
 ## In Progress: Sample File Publish Fix
 
-- [ ] Track and push `scoreboard-sample-3-rounds.tex` to `main` to resolve README link 404
+- [x] Track and push `scoreboard-sample-3-rounds.tex` to `main` to resolve README link 404
 
 ## In Progress: Round Expiry + Switch Claim Stability
 
