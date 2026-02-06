@@ -348,6 +348,16 @@ Current phase: `Phase 2 - Feature Hardening`
 
 - [x] Track and push `scoreboard-sample-3-rounds.tex` to `main` to resolve README link 404
 
+## In Progress: Plaintext/TeX Wrap Bug Fix
+
+- [x] Stop treating escaped `\\$` in plaintext as math delimiters
+- [x] Normalize plaintext TeX escapes to prevent `\\textbackslash{}` artifacts in projection
+
+## In Progress: Branch + Distribution Refresh PR
+
+- [x] Rebuild unsigned macOS distribution artifact after plaintext/TeX fix
+- [x] Create branch, commit, push, and open PR to `main`
+
 ## In Progress: Round Expiry + Switch Claim Stability
 
 - [x] Prevent round timer expiry from auto-changing game phase/state

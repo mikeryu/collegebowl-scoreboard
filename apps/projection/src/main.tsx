@@ -23,8 +23,14 @@ const escapeTeXText = (text: string): string =>
     .replace(/~/g, "\\textasciitilde{}")
     .replace(/\n/g, "\\\\ ");
 
+const normalizePlainTeXEscapes = (text: string): string =>
+  text
+    .replace(/\\([#$%&_{}])/g, "$1")
+    .replace(/\\textbackslash\{\}/g, "\\");
+
 const wrapPlainTextLines = (text: string, maxCharsPerLine: number = 52): string[] => {
-  const words = text.trim().split(/\s+/).filter(Boolean);
+  const normalized = normalizePlainTeXEscapes(text);
+  const words = normalized.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return [];
 
   const lines: string[] = [];
@@ -68,7 +74,8 @@ const hasComplexTeXStructure = (text: string): boolean =>
 
 type Segment = { kind: "text"; value: string } | { kind: "math"; value: string };
 
-const MATH_SEGMENT_PATTERN = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\$[^$\n]+\$|\\\([\s\S]+?\\\))/g;
+const MATH_SEGMENT_PATTERN =
+  /((?<!\\)\$\$[\s\S]+?(?<!\\)\$\$|\\\[[\s\S]+?\\\]|(?<!\\)\$[^$\n]+?(?<!\\)\$|\\\([\s\S]+?\\\))/g;
 
 const splitMixedSegments = (line: string): Segment[] => {
   const segments: Segment[] = [];
@@ -121,7 +128,7 @@ const wrapMixedLine = (line: string, maxCharsPerLine: number = 52): string[] => 
     }
 
     const words = segment.value.trim().split(/\s+/).filter(Boolean);
-    if (words.length > 0) tokens.push(...words);
+    if (words.length > 0) tokens.push(...words.map((word) => normalizePlainTeXEscapes(word)));
   }
 
   if (tokens.length === 0) return [];
@@ -154,6 +161,8 @@ const unwrapMathDelimiters = (value: string): string => {
   return value.trim();
 };
 
+const injectMathBreakHints = (math: string): string => math.replace(/\s*([=+-])\s*/g, " \\allowbreak$1 ");
+
 const convertMixedLineToTeX = (line: string): string => {
   const segments = splitMixedSegments(line);
   const parts: string[] = [];
@@ -161,11 +170,11 @@ const convertMixedLineToTeX = (line: string): string => {
   for (const segment of segments) {
     if (segment.kind === "math") {
       const math = unwrapMathDelimiters(segment.value);
-      if (math) parts.push(math);
+      if (math) parts.push(injectMathBreakHints(math));
       continue;
     }
 
-    const textChunk = segment.value;
+    const textChunk = normalizePlainTeXEscapes(segment.value);
     if (!textChunk.trim()) {
       if (textChunk.length > 0) parts.push("\\,");
       continue;
@@ -185,9 +194,11 @@ const normalizeTeX = (text: string): string => {
   if (!sanitized) return "";
 
   if (hasComplexTeXStructure(sanitized)) return sanitized;
+  const hasDisplayMathBlock = /(?<!\\)\$\$[\s\S]*?(?<!\\)\$\$|\\\[[\s\S]*?\\\]/.test(sanitized);
+  if (hasDisplayMathBlock) return sanitized;
 
-  const hasTeXSyntax = /\\[a-zA-Z]+|\$\$?|\\\(|\\\[/.test(sanitized);
-  const hasExplicitMathDelimiters = /\$\$?|\\\(|\\\[/.test(sanitized);
+  const hasTeXSyntax = /\\[a-zA-Z]+|(?<!\\)\$\$?|\\\(|\\\[/.test(sanitized);
+  const hasExplicitMathDelimiters = /(?<!\\)\$\$?|\\\(|\\\[/.test(sanitized);
 
   if (hasTeXSyntax && !hasExplicitMathDelimiters) return sanitized;
 
