@@ -1,0 +1,117 @@
+% Scoreboard Sample Game Packet (3 rounds)
+% Valid/compilable in Overleaf and parser-compatible for the app.
+
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{lmodern}
+
+\definecolor{wmred}{HTML}{9D2235}
+\definecolor{wmgray}{HTML}{63666A}
+\definecolor{wmgold}{HTML}{CEB888}
+
+\tcbset{
+  enhanced,
+  breakable,
+  boxrule=0.8pt,
+  arc=2mm,
+  left=2mm,
+  right=2mm,
+  top=1.2mm,
+  bottom=1.2mm
+}
+
+\newcounter{roundctr}
+\newenvironment{game}{
+  \setcounter{roundctr}{0}
+  \begin{center}
+    {\LARGE\bfseries Scoreboard Sample Packet}\\[2mm]
+    {\large Three-Round Toss-Up / Follow-Up Set}
+  \end{center}
+  \vspace{3mm}
+}{}
+\newenvironment{round}{
+  \refstepcounter{roundctr}
+  \clearpage
+  \begin{tcolorbox}[colback=wmgold!22,colframe=wmgold!65!black,title={Round \theroundctr},fonttitle=\bfseries\large]
+}{\end{tcolorbox}}
+\newenvironment{tossup}{
+  \begin{tcolorbox}[colback=wmgray!8,colframe=wmgray!65!black,title={1. Toss-Up Question},fonttitle=\bfseries]
+}{\end{tcolorbox}}
+\newenvironment{tossupanswer}{
+  \begin{tcolorbox}[colback=green!5,colframe=green!45!black,title={1.1 Toss-Up Answer},fonttitle=\bfseries]
+}{\end{tcolorbox}}
+\newenvironment{followup}{
+  \begin{tcolorbox}[colback=wmred!4,colframe=wmred!70!black,title={2. Follow-Up Question},fonttitle=\bfseries]
+}{\end{tcolorbox}}
+\newenvironment{followupanswer}{
+  \begin{tcolorbox}[colback=blue!4,colframe=blue!45!black,title={2.2 Follow-Up Answer},fonttitle=\bfseries]
+}{\end{tcolorbox}}
+\newenvironment{emceenotes}{
+  \begin{tcolorbox}[colback=yellow!8,colframe=yellow!45!black,title={Emcee Notes (Ignored by Parser for Question Content)},fonttitle=\bfseries]
+  \footnotesize
+}{\end{tcolorbox}}
+
+\begin{document}
+\begin{game}
+
+\begin{round}
+\begin{tossup}
+A pizza is cut into $8$ equal slices. If Maya eats $3$ slices, what fraction of the pizza does she eat?
+\end{tossup}
+\begin{tossupanswer}
+$\frac{3}{8}$
+\end{tossupanswer}
+\begin{followup}
+Solve: $7x-5=30$.
+\end{followup}
+\begin{followupanswer}
+$x=5$
+\end{followupanswer}
+\begin{emceenotes}
+Accept equivalent fraction notation for the toss-up answer.
+\end{emceenotes}
+\end{round}
+
+\begin{round}
+\begin{tossup}
+Round $2$: A school bus travels $24$ miles in the morning and $18$ miles in the afternoon. How many miles total does it travel?
+\end{tossup}
+\begin{tossupanswer}
+$42$
+\end{tossupanswer}
+\begin{followup}
+Find the area of a rectangle with length $12$ cm and width $5$ cm.
+\end{followup}
+\begin{followupanswer}
+$60\text{ cm}^2$
+\end{followupanswer}
+\begin{emceenotes}
+Require units for full credit on follow-up.
+\end{emceenotes}
+\end{round}
+
+\begin{round}
+\begin{tossup}
+The ratio of red marbles to blue marbles is $3:5$. If there are $15$ red marbles, how many blue marbles are there?
+\end{tossup}
+\begin{tossupanswer}
+$25$
+\end{tossupanswer}
+\begin{followup}
+Round $3$ follow-up: The temperature was $72^\circ$F at noon and dropped by $14^\circ$F by evening. What was the evening temperature?
+\end{followup}
+\begin{followupanswer}
+$58^\circ\text{F}$
+\end{followupanswer}
+\begin{emceenotes}
+Allow numerical answer without degree symbol if clearly identified as Fahrenheit.
+\end{emceenotes}
+\end{round}
+
+\end{game}
+\end{document}

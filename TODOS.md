@@ -344,6 +344,10 @@ Current phase: `Phase 2 - Feature Hardening`
 - [x] Restructure README into separate Regular User and Developer sections
 - [x] Expand Regular User instructions for download, first launch, setup, and running a game
 
+## In Progress: Sample File Publish Fix
+
+- [ ] Track and push `scoreboard-sample-3-rounds.tex` to `main` to resolve README link 404
+
 ## In Progress: Round Expiry + Switch Claim Stability
 
 - [x] Prevent round timer expiry from auto-changing game phase/state
