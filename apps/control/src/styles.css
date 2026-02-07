@@ -324,6 +324,7 @@ button {
   background: rgba(255, 255, 255, 0.06);
   color: var(--ink);
   cursor: pointer;
+  transition: filter 120ms ease, box-shadow 120ms ease, transform 80ms ease, background 120ms ease;
 }
 
 button:hover {
@@ -339,6 +340,19 @@ button.primary {
   background: linear-gradient(155deg, rgba(157, 34, 53, 0.95), rgba(107, 21, 37, 0.95));
   border-color: rgba(255, 255, 255, 0.22);
   color: white;
+}
+
+button.primary:hover,
+.projector-controls .open-projector-btn:hover,
+.game-controls .round-toggle-btn.start-mode:hover {
+  filter: brightness(1.08) saturate(1.04);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+}
+
+button.primary:active,
+.projector-controls .open-projector-btn:active,
+.game-controls .round-toggle-btn.start-mode:active {
+  filter: brightness(1.12) saturate(1.06);
 }
 
 .flow .label,
@@ -1125,6 +1139,28 @@ textarea {
   color: var(--ink);
   text-align: center;
   cursor: pointer;
+  transition: filter 120ms ease, box-shadow 120ms ease, transform 80ms ease, background 120ms ease;
+}
+
+.file-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  filter: brightness(1.05);
+}
+
+.file-btn:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+.file-btn.file-btn-primary {
+  background: linear-gradient(155deg, rgba(157, 34, 53, 0.95), rgba(107, 21, 37, 0.95));
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  font-weight: 700;
+}
+
+.file-btn.file-btn-primary:hover {
+  filter: brightness(1.08) saturate(1.04);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
 }
 
 .file-btn.disabled {

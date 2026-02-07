@@ -15,6 +15,8 @@ const formatClock = (seconds: number): string => {
 };
 
 const normalizeDisplayAnswer = (text: string): string => text.trim().replace(/\.\s*$/, "");
+const EVENT_STANDBY_PROMPT = String.raw`$$\begin{aligned}\textbf{Westmont College}\\\textbf{Math Field Day}\\[2pt]\text{Awaiting game start}\end{aligned}$$`;
+const EVENT_COMPLETE_PROMPT_MARKER = "GAME COMPLETE";
 
 const FullTeX = memo(function FullTeX({ text }: { text: string }) {
   const source = useMemo(() => normalizeTeXForDisplay(text), [text]);
@@ -75,7 +77,7 @@ function App() {
     paused && showPauseGlyph ? "||" : formatClock(seconds);
 
   const displayPrompt = !state.started
-    ? "Awaiting game start"
+    ? EVENT_STANDBY_PROMPT
     : state.question.prompt || "Awaiting question content";
   const activeQuestionPhases: AppState["phase"][] = [
     "tossup:active",
@@ -88,7 +90,7 @@ function App() {
     "answer:revealed"
   ];
   const showingQuestion = activeQuestionPhases.includes(state.phase);
-  const isGameComplete = /game complete/i.test(displayPrompt);
+  const isGameComplete = new RegExp(EVENT_COMPLETE_PROMPT_MARKER, "i").test(displayPrompt);
   const questionKindLabel = isGameComplete
     ? "GAME COMPLETE"
     : !showingQuestion
