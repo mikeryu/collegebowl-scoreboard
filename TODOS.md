@@ -3,6 +3,21 @@
 Last updated: February 6, 2026
 Current phase: `Phase 2 - Feature Hardening`
 
+## In Progress: Queue Clarity + TeX Preview Parity + Performance
+
+- [ ] Queue selected-vs-active visual distinction
+  - [x] add `queued` row state style (filled accent) distinct from active gold row
+  - [x] add explicit `QUEUED` badge for selected round
+- [x] Shared TeX normalization and rendering parity
+  - [x] move TeX normalization into shared utility and reuse in projection/control
+  - [x] render controller round preview with MathJax
+- [x] Runtime smoothness pass
+  - [x] skip no-op state broadcasts in main process
+  - [x] memoize expensive TeX rendering in projection/control
+- [x] Validation + release artifact refresh
+  - [x] run lint/typecheck/tests
+  - [x] rebuild unsigned mac zip artifact
+
 ## In Progress: UX Balance + Control Affordance Pass
 
 - [x] Projection UX rebalance
@@ -366,9 +381,23 @@ Current phase: `Phase 2 - Feature Hardening`
 
 - [x] Rebuild and refresh root unsigned macOS zip artifact after `\allowbreak` fix
 
+## In Progress: Currency Dollar Robustness
+
+- [ ] Normalize accidental currency forms like `\\$$45$` into literal currency tokens before projection rendering
+- [ ] Document recommended `.tex` writing conventions for currency/percent/math boundaries
+
 ## In Progress: Mixed Text/Math Boundary Spacing Fix
 
 - [x] Fix projection rendering where math and text concatenate (e.g. `45coat`, `x$\\%`) in mixed TeX/plaintext prompts
+
+## In Progress: Currency Dollar Robustness
+
+- [x] Normalize accidental currency forms like `\\$$45$` into literal currency tokens before projection rendering
+- [x] Document recommended `.tex` writing conventions for currency/percent/math boundaries
+
+## In Progress: Math-Percent Boundary Canonicalization
+
+- [x] Canonicalize `$...$\\%` patterns to `$...\\%$` so projected output renders `%` without literal backslash
 
 ## In Progress: Round Expiry + Switch Claim Stability
 
