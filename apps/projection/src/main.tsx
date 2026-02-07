@@ -43,38 +43,25 @@ function App() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!state) {
-      setShowPauseGlyph(false);
-      return;
-    }
-
-    const roundPaused =
-      state.started && state.phase !== "round-ended" && !state.roundTimer.running && state.roundTimer.secondsRemaining > 0;
-    const questionPaused =
+  const anyPaused = Boolean(
+    state &&
       state.started &&
       state.phase !== "round-ended" &&
-      !state.questionTimer.running &&
-      state.questionTimer.secondsRemaining > 0;
-    const anyPaused = roundPaused || questionPaused;
+      ((!state.roundTimer.running && state.roundTimer.secondsRemaining > 0) ||
+        (!state.questionTimer.running && state.questionTimer.secondsRemaining > 0))
+  );
 
+  useEffect(() => {
     if (!anyPaused) {
       setShowPauseGlyph(false);
       return;
     }
 
-    setShowPauseGlyph(true);
+    // Alternate exactly 1000ms clock then 1000ms pause glyph.
+    setShowPauseGlyph(false);
     const intervalId = window.setInterval(() => setShowPauseGlyph((prev) => !prev), 1000);
     return () => window.clearInterval(intervalId);
-  }, [
-    state,
-    state?.phase,
-    state?.started,
-    state?.roundTimer.running,
-    state?.roundTimer.secondsRemaining,
-    state?.questionTimer.running,
-    state?.questionTimer.secondsRemaining
-  ]);
+  }, [anyPaused]);
 
   if (!state) {
     return <main className="projection" />;
@@ -122,16 +109,20 @@ function App() {
   const promptLength = displayPrompt.trim().length;
   const promptHasMath = /\$\$?|\\\(|\\\[|\\[a-zA-Z]+/.test(displayPrompt);
   const promptDensityClass = promptHasMath
-    ? promptLength > 260
+    ? promptLength > 210
       ? "ultra-dense"
-      : promptLength > 140
+      : promptLength > 130
         ? "dense"
+        : promptLength > 80
+          ? "max-dense"
+          : ""
+    : promptLength > 360
+      ? "ultra-dense"
+      : promptLength > 230
+        ? "dense"
+        : promptLength > 150
+          ? "max-dense"
         : ""
-    : promptLength > 420
-      ? "ultra-dense"
-      : promptLength > 260
-        ? "dense"
-        : "";
   const answerVisible = state.question.displayMode === "answer-revealed" || state.question.displayMode === "solution-revealed";
 
   const answerBody = answerVisible ? (

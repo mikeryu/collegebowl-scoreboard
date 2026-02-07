@@ -29,6 +29,12 @@ const canonicalizeCurrencyForms = (text: string): string =>
 const canonicalizeMathPercentBoundary = (text: string): string =>
   text.replace(/(?<!\\)\$([^$\n]+?)(?<!\\)\$\s*\\%/g, (_match, expr) => `$${String(expr).trim()}\\%$`);
 
+const normalizeEditorialBreaks = (text: string): string =>
+  text
+    .replace(/\\vspace\*?\{[^}]*\}/g, "\n")
+    .replace(/\\(?:smallskip|medskip|bigskip)\b/g, "\n")
+    .replace(/\\\\(?:\[[^\]]*\])?/g, "\n");
+
 const hasComplexTeXStructure = (text: string): boolean =>
   /\\begin\{(?!matrix|pmatrix|bmatrix|Bmatrix|vmatrix|Vmatrix|cases|array)[^}]+\}/.test(text);
 
@@ -104,11 +110,44 @@ const convertMixedLineToTeX = (line: string): string => {
   return parts.join(" \\ ");
 };
 
+const wrapMixedLineForDisplay = (line: string, maxWeight: number = 44): string[] => {
+  const segments = splitMixedSegments(line);
+  const tokens: string[] = [];
+  for (const segment of segments) {
+    if (segment.kind === "math") {
+      tokens.push(segment.value.trim());
+      continue;
+    }
+    tokens.push(...segment.value.trim().split(/\s+/).filter(Boolean));
+  }
+  if (tokens.length === 0) return [];
+
+  const lines: string[] = [];
+  let current = "";
+  let currentWeight = 0;
+  for (const token of tokens) {
+    const tokenWeight = /^(?:\$|\\\(|\\\[)/.test(token) ? Math.max(10, Math.floor(token.length * 0.8)) : token.length;
+    const nextWeight = current ? currentWeight + 1 + tokenWeight : tokenWeight;
+    if (current && nextWeight > maxWeight) {
+      lines.push(current);
+      current = token;
+      currentWeight = tokenWeight;
+    } else {
+      current = current ? `${current} ${token}` : token;
+      currentWeight = nextWeight;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+};
+
 export const normalizeTeXForDisplay = (input: string): string => {
   const trimmed = input.trim();
   if (!trimmed) return "";
 
-  const sanitized = canonicalizeMathPercentBoundary(canonicalizeCurrencyForms(stripGameEnvironmentWrappers(trimmed)));
+  const sanitized = normalizeEditorialBreaks(
+    canonicalizeMathPercentBoundary(canonicalizeCurrencyForms(stripGameEnvironmentWrappers(trimmed)))
+  );
   if (!sanitized) return "";
 
   if (hasComplexTeXStructure(sanitized) || hasDisplayMathBlock(sanitized)) {
@@ -119,14 +158,15 @@ export const normalizeTeXForDisplay = (input: string): string => {
     return sanitized;
   }
 
-  const lines = sanitized
+  const sourceLines = sanitized
     .split(/\n+/)
     .map((line) => line.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .flatMap((line) => wrapMixedLineForDisplay(line, 44));
 
-  if (lines.length === 0) return "";
+  if (sourceLines.length === 0) return "";
 
-  const texLines = lines.map((line) => convertMixedLineToTeX(line)).filter(Boolean).join(" \\\\ ");
+  const texLines = sourceLines.map((line) => convertMixedLineToTeX(line)).filter(Boolean).join(" \\\\ ");
   if (!texLines) return "";
 
   return `\\[\\begin{array}{@{}l@{}}${texLines}\\end{array}\\]`;

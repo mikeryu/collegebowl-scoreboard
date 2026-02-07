@@ -83,6 +83,7 @@ function canReveal(nextState, atMs) {
   if (!nextState.started) return false;
   if (!nextState.revealEligible) return false;
   if (nextState.phase !== "answer:eligible") return false;
+  if (nextState.testingMode) return true;
   if (!nextState.revealHoldStartedAtMs) return false;
   return atMs - nextState.revealHoldStartedAtMs >= REVEAL_HOLD_MS;
 }
@@ -93,6 +94,7 @@ function initialState() {
   return {
     phase: "idle",
     projectionOpen: false,
+    testingMode: false,
     leftTeam: { name: "LEFT TEAM", score: 0, hasClaim: false },
     rightTeam: { name: "RIGHT TEAM", score: 0, hasClaim: false },
     config: { ...DEFAULT_CONFIG },
@@ -152,6 +154,11 @@ function reduceCommand(previous, command) {
   const nextState = structuredClone(previous);
 
   switch (command.type) {
+    case "testing-mode:set": {
+      nextState.testingMode = Boolean(command.enabled);
+      break;
+    }
+
     case "setup:apply": {
       nextState.leftTeam.name = command.payload.leftTeamName.trim() || nextState.leftTeam.name;
       nextState.rightTeam.name = command.payload.rightTeamName.trim() || nextState.rightTeam.name;
