@@ -142,8 +142,14 @@ let projectionWindow = null;
 let tickHandle = null;
 
 function reduceCommand(previous, command) {
-  const nextState = structuredClone(previous);
   const atMs = command.type === "clock:tick" ? (command.nowMs ?? Date.now()) : Date.now();
+  if (command.type === "clock:tick") {
+    const elapsed = Math.max(0, Math.floor((atMs - previous.lastUpdatedMs) / 1000));
+    if (elapsed === 0) {
+      return previous;
+    }
+  }
+  const nextState = structuredClone(previous);
 
   switch (command.type) {
     case "setup:apply": {
@@ -662,7 +668,11 @@ function broadcastState() {
 }
 
 function applyCommand(command) {
-  state = reduceCommand(state, command);
+  const nextState = reduceCommand(state, command);
+  if (nextState === state) {
+    return;
+  }
+  state = nextState;
   broadcastState();
 }
 

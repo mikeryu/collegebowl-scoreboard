@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import type { AppCommand, AppState, SetupPayload, TeamSide } from "@scoreboard/shared";
+import { normalizeTeXForDisplay, type AppCommand, type AppState, type SetupPayload, type TeamSide } from "@scoreboard/shared";
+import { MathJax, MathJaxContext } from "better-react-mathjax";
 import "./styles.css";
 import warningSoundDataUrl from "./assets/legacy-warning-dataurl.txt?raw";
 import expiredSoundDataUrl from "./assets/legacy-expired-dataurl.txt?raw";
@@ -246,6 +247,40 @@ const playWarningBeep = (): void => {
 const playExpiredAlarm = (): void => {
   playLegacySound(expiredSoundDataUrl);
 };
+
+const MATHJAX_CONFIG = {
+  tex: {
+    inlineMath: [
+      ["$", "$"],
+      ["\\(", "\\)"]
+    ],
+    displayMath: [
+      ["$$", "$$"],
+      ["\\[", "\\]"]
+    ],
+    processEscapes: true
+  },
+  chtml: {
+    displayOverflow: "linebreak",
+    linebreaks: {
+      automatic: true,
+      width: "container"
+    }
+  },
+  svg: {
+    displayOverflow: "linebreak",
+    linebreaks: {
+      automatic: true,
+      width: "container"
+    }
+  }
+} as const;
+
+const PreviewTeX = React.memo(function PreviewTeX({ text }: { text: string }) {
+  const normalized = useMemo(() => normalizeTeXForDisplay(text), [text]);
+  if (!normalized) return null;
+  return <MathJax dynamic>{normalized}</MathJax>;
+});
 
 function send(command: AppCommand): void {
   window.scoreboardAPI?.sendCommand(command);
@@ -1114,7 +1149,8 @@ function App() {
   const phaseLabel = state.phase.replace(/:/g, " ");
 
   return (
-    <main className="control-shell">
+    <MathJaxContext config={MATHJAX_CONFIG}>
+      <main className="control-shell">
       <header className="topbar">
         <h1>Scoreboard Control</h1>
         <div className="tab-row">
@@ -1369,14 +1405,23 @@ function App() {
             <p className="label">Questions Queue</p>
             <div className="queue-list">
               {rounds.map((round, index) => (
-                <button
-                  key={round.id}
-                  className={index === currentRoundIndex ? "queue-item active" : "queue-item"}
-                  onClick={() => setSelectedRoundIndex(index)}
-                >
-                  <strong>{round.title}</strong>
-                  <span>{round.tossup.slice(0, 100)}</span>
-                </button>
+                (() => {
+                  const isActive = index === currentRoundIndex;
+                  const isQueued = index === selectedRoundIndex && !isActive;
+                  return (
+                    <button
+                      key={round.id}
+                      className={["queue-item", isActive ? "active" : "", isQueued ? "queued" : ""].filter(Boolean).join(" ")}
+                      onClick={() => setSelectedRoundIndex(index)}
+                    >
+                      <div className="queue-item-title-row">
+                        <strong>{round.title}</strong>
+                        {isQueued ? <span className="queue-badge">QUEUED</span> : null}
+                      </div>
+                      <span>{round.tossup.slice(0, 100)}</span>
+                    </button>
+                  );
+                })()
               ))}
             </div>
             <div className="queue-actions">
@@ -1409,10 +1454,22 @@ function App() {
             {selectedRound ? (
               <div className="queue-preview">
                 <p><strong>{selectedRound.title}</strong></p>
-                <p><strong>Toss-up:</strong> {selectedRound.tossup}</p>
-                <p><strong>Toss-up Ans:</strong> {selectedRound.tossupAnswer}</p>
-                <p><strong>Follow-up:</strong> {selectedRound.followup}</p>
-                <p><strong>Follow-up Ans:</strong> {selectedRound.followupAnswer}</p>
+                <div className="preview-section">
+                  <p className="preview-label"><strong>Toss-up</strong></p>
+                  <div className="preview-math"><PreviewTeX text={selectedRound.tossup} /></div>
+                </div>
+                <div className="preview-section">
+                  <p className="preview-label"><strong>Toss-up Answer</strong></p>
+                  <div className="preview-math"><PreviewTeX text={selectedRound.tossupAnswer} /></div>
+                </div>
+                <div className="preview-section">
+                  <p className="preview-label"><strong>Follow-up</strong></p>
+                  <div className="preview-math"><PreviewTeX text={selectedRound.followup} /></div>
+                </div>
+                <div className="preview-section">
+                  <p className="preview-label"><strong>Follow-up Answer</strong></p>
+                  <div className="preview-math"><PreviewTeX text={selectedRound.followupAnswer} /></div>
+                </div>
               </div>
             ) : (
               <div className="queue-preview">
@@ -1546,7 +1603,8 @@ function App() {
           </div>
         </div>
       ) : null}
-    </main>
+      </main>
+    </MathJaxContext>
   );
 }
 
