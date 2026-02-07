@@ -40,8 +40,11 @@ const MAX_ROUNDS = 200;
 const REVEAL_HOLD_MS = 1000;
 const OVERRIDE_HOLD_MS = 2000;
 const PROJECTOR_CLOSE_HOLD_MS = 1000;
+const PROJECTOR_REOPEN_GUARD_MS = 600;
 const GAME_RESET_HOLD_MS = 3000;
 const USE_NOW_HOLD_MS = 2000;
+const EVENT_STANDBY_PROMPT = String.raw`$$\begin{aligned}\textbf{Westmont College}\\\textbf{Math Field Day}\\[2pt]\text{Awaiting game start}\end{aligned}$$`;
+const EVENT_COMPLETE_PROMPT = String.raw`$$\begin{aligned}\textbf{Westmont College}\\\textbf{Math Field Day}\\[2pt]\textbf{GAME COMPLETE}\\\text{Thanks for competing!}\end{aligned}$$`;
 
 const TEX_TEMPLATE = String.raw`% Scoreboard Game Template (.tex)
 % Valid and compilable in Overleaf.
@@ -325,6 +328,7 @@ function App() {
   const projectorCloseHoldTimeoutRef = useRef<number | null>(null);
   const projectorCloseHoldTickRef = useRef<number | null>(null);
   const projectorCloseHoldStartedAtRef = useRef<number | null>(null);
+  const projectorReopenGuardUntilRef = useRef<number>(0);
   const gameResetHoldTimeoutRef = useRef<number | null>(null);
   const gameResetHoldTickRef = useRef<number | null>(null);
   const gameResetHoldStartedAtRef = useRef<number | null>(null);
@@ -450,7 +454,7 @@ function App() {
       send({
         type: "question:set-content",
         payload: {
-          prompt: "GAME COMPLETE - All rounds have been played.",
+          prompt: EVENT_COMPLETE_PROMPT,
           answer: "",
           solution: ""
         }
@@ -488,7 +492,7 @@ function App() {
       send({
         type: "question:set-content",
         payload: {
-          prompt: "GAME COMPLETE - All rounds have been played.",
+          prompt: EVENT_COMPLETE_PROMPT,
           answer: "",
           solution: ""
         }
@@ -597,7 +601,7 @@ function App() {
           send({
             type: "question:set-content",
             payload: {
-              prompt: "Awaiting game start",
+              prompt: EVENT_STANDBY_PROMPT,
               answer: parsed.rounds[0].tossupAnswer,
               solution: ""
             }
@@ -1078,6 +1082,12 @@ function App() {
   };
 
   const projectionAction = (type: "projection:open" | "projection:refresh" | "projection:close"): void => {
+    if (type === "projection:open" && Date.now() < projectorReopenGuardUntilRef.current) {
+      return;
+    }
+    if (type === "projection:close") {
+      projectorReopenGuardUntilRef.current = Date.now() + PROJECTOR_REOPEN_GUARD_MS;
+    }
     send({ type });
   };
 
@@ -1699,7 +1709,11 @@ function App() {
           </p>
           <div className={`queue-actions setup-file-actions ${setupConfigLocked ? "locked-actions" : ""}`}>
             <button onClick={downloadTemplate} disabled={setupConfigLocked}>Download Template</button>
-            <label className={`file-btn ${setupConfigLocked ? "disabled" : ""}`}>
+            <label
+              className={`file-btn ${!gameLoaded && !setupConfigLocked ? "file-btn-primary" : ""} ${
+                setupConfigLocked ? "disabled" : ""
+              }`}
+            >
               Load .tex
               <input
                 type="file"

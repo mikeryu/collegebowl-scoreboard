@@ -3,6 +3,29 @@
 Last updated: February 6, 2026
 Current phase: `Phase 2 - Feature Hardening`
 
+## In Progress: Event-Branded Standby + End-Game Messaging
+
+- [x] Standby screen polish
+  - [x] replace default standby copy with event-branded message
+  - [x] include explicit line break for `Westmont College` / `Math Field Day`
+- [x] End-game screen polish
+  - [x] replace plain game-complete copy with branded closer
+  - [x] keep `GAME COMPLETE` marker for existing detection logic
+
+## In Progress: Projector Close/Open Click-Through Guard
+
+- [x] Prevent immediate reopen after hold-close
+  - [x] add short open-projector cooldown after close action completes
+  - [x] ensure residual mouse-up/click does not reopen projector
+
+## In Progress: Button Feedback Consistency + Load CTA Priority
+
+- [x] Red button interaction consistency
+  - [x] add clear hover/press feedback for all red CTA buttons
+- [x] Setup load CTA emphasis
+  - [x] make `Load .tex` visually prominent (red) when no file is loaded
+  - [x] keep `Load .tex` feedback consistent with other clickable controls
+
 ## In Progress: Queue Height Independence + Setup Overflow Fix
 
 - [x] Queue panel height independence
