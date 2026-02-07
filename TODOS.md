@@ -3,6 +3,16 @@
 Last updated: February 6, 2026
 Current phase: `Phase 2 - Feature Hardening`
 
+## In Progress: Branded Pregame/Completion Screens (Projection)
+
+- [x] Replace text-only standby/completion with dedicated branded screens
+  - [x] pregame screen uses event branding and clear “ready” state
+  - [x] completion screen uses event branding and clear “complete” state
+  - [x] hide regular question prompt/label content during these screens
+- [x] Remove ugly TeX text concatenation path for start/end messages
+  - [x] switch control standby/end prompt payloads to simple sentinel text
+  - [x] keep game-complete detection robust for projection mode switching
+
 ## In Progress: Event-Branded Standby + End-Game Messaging
 
 - [x] Standby screen polish

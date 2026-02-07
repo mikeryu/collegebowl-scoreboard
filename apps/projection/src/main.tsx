@@ -15,7 +15,6 @@ const formatClock = (seconds: number): string => {
 };
 
 const normalizeDisplayAnswer = (text: string): string => text.trim().replace(/\.\s*$/, "");
-const EVENT_STANDBY_PROMPT = String.raw`$$\begin{aligned}\textbf{Westmont College}\\\textbf{Math Field Day}\\[2pt]\text{Awaiting game start}\end{aligned}$$`;
 const EVENT_COMPLETE_PROMPT_MARKER = "GAME COMPLETE";
 
 const FullTeX = memo(function FullTeX({ text }: { text: string }) {
@@ -76,9 +75,7 @@ function App() {
   const displayTimer = (seconds: number, paused: boolean): string =>
     paused && showPauseGlyph ? "||" : formatClock(seconds);
 
-  const displayPrompt = !state.started
-    ? EVENT_STANDBY_PROMPT
-    : state.question.prompt || "Awaiting question content";
+  const displayPrompt = state.question.prompt || "Awaiting question content";
   const activeQuestionPhases: AppState["phase"][] = [
     "tossup:active",
     "tossup:review",
@@ -90,7 +87,12 @@ function App() {
     "answer:revealed"
   ];
   const showingQuestion = activeQuestionPhases.includes(state.phase);
-  const isGameComplete = new RegExp(EVENT_COMPLETE_PROMPT_MARKER, "i").test(displayPrompt);
+  const isGameComplete = state.started && new RegExp(EVENT_COMPLETE_PROMPT_MARKER, "i").test(displayPrompt);
+  const specialScreenMode: "pregame" | "complete" | null = !state.started
+    ? "pregame"
+    : isGameComplete
+      ? "complete"
+      : null;
   const questionKindLabel = isGameComplete
     ? "GAME COMPLETE"
     : !showingQuestion
@@ -208,21 +210,36 @@ function App() {
             <div className={`question-kind-banner ${questionKindClass}`}>
               {questionKindLabel}
             </div>
-            <p className="panel-label current-question-label">Current Question</p>
-            <div className={`problem-prompt ${promptDensityClass}`}>
-              {isAwaitingNextPhase ? (
-                <div className="awaiting-spinner-wrap" aria-label="Awaiting next phase">
-                  <div className="awaiting-spinner" />
+            {specialScreenMode ? (
+              <div className={`event-screen ${specialScreenMode}`}>
+                <p className="event-kicker">{specialScreenMode === "pregame" ? "WELCOME" : "FINALE"}</p>
+                <h2 className="event-title">Westmont College</h2>
+                <h3 className="event-subtitle">Math Field Day</h3>
+                <p className="event-status">
+                  {specialScreenMode === "pregame" ? "Get ready. The competition begins soon." : "Competition complete. Thank you for competing!"}
+                </p>
+              </div>
+            ) : (
+              <>
+                <p className="panel-label current-question-label">Current Question</p>
+                <div className={`problem-prompt ${promptDensityClass}`}>
+                  {isAwaitingNextPhase ? (
+                    <div className="awaiting-spinner-wrap" aria-label="Awaiting next phase">
+                      <div className="awaiting-spinner" />
+                    </div>
+                  ) : (
+                    <FullTeX text={displayPrompt} />
+                  )}
                 </div>
-              ) : (
-                <FullTeX text={displayPrompt} />
-              )}
-            </div>
+              </>
+            )}
 
-            <div className={`answer-drawer ${answerVisible ? "visible" : ""}`}>
-              <p className="panel-label answer-label">Answer</p>
-              {answerVisible ? answerBody : null}
-            </div>
+            {!specialScreenMode ? (
+              <div className={`answer-drawer ${answerVisible ? "visible" : ""}`}>
+                <p className="panel-label answer-label">Answer</p>
+                {answerVisible ? answerBody : null}
+              </div>
+            ) : null}
           </section>
         </div>
       </main>

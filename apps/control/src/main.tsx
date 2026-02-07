@@ -43,8 +43,8 @@ const PROJECTOR_CLOSE_HOLD_MS = 1000;
 const PROJECTOR_REOPEN_GUARD_MS = 600;
 const GAME_RESET_HOLD_MS = 3000;
 const USE_NOW_HOLD_MS = 2000;
-const EVENT_STANDBY_PROMPT = String.raw`$$\begin{aligned}\textbf{Westmont College}\\\textbf{Math Field Day}\\[2pt]\text{Awaiting game start}\end{aligned}$$`;
-const EVENT_COMPLETE_PROMPT = String.raw`$$\begin{aligned}\textbf{Westmont College}\\\textbf{Math Field Day}\\[2pt]\textbf{GAME COMPLETE}\\\text{Thanks for competing!}\end{aligned}$$`;
+const EVENT_STANDBY_PROMPT = "PREGAME STANDBY";
+const EVENT_COMPLETE_PROMPT = "GAME COMPLETE";
 
 const TEX_TEMPLATE = String.raw`% Scoreboard Game Template (.tex)
 % Valid and compilable in Overleaf.
