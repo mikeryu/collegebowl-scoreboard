@@ -76,6 +76,7 @@ const canReveal = (state: AppState, atMs: number): boolean => {
   if (!state.started) return false;
   if (!state.revealEligible) return false;
   if (state.phase !== "answer:eligible") return false;
+  if (state.testingMode) return true;
   if (!state.revealHoldStartedAtMs) return false;
   return atMs - state.revealHoldStartedAtMs >= REVEAL_HOLD_MS;
 };
@@ -83,6 +84,7 @@ const canReveal = (state: AppState, atMs: number): boolean => {
 export const createInitialState = (seedNowMs: number = now()): AppState => ({
   phase: "idle",
   projectionOpen: false,
+  testingMode: false,
   leftTeam: { name: "LEFT TEAM", score: 0, hasClaim: false },
   rightTeam: { name: "RIGHT TEAM", score: 0, hasClaim: false },
   config: { ...DEFAULT_CONFIG },
@@ -125,6 +127,11 @@ export const reduceCommand = (previous: AppState, command: AppCommand): AppState
   const atMs = command.type === "clock:tick" ? (command.nowMs ?? now()) : now();
 
   switch (command.type) {
+    case "testing-mode:set": {
+      state.testingMode = Boolean(command.enabled);
+      break;
+    }
+
     case "setup:apply": {
       state.leftTeam.name = command.payload.leftTeamName.trim() || state.leftTeam.name;
       state.rightTeam.name = command.payload.rightTeamName.trim() || state.rightTeam.name;

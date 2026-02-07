@@ -269,8 +269,8 @@ body {
 }
 
 .problem-prompt {
-  padding: 0 0.3rem 0 0;
-  font-size: clamp(1.62rem, 3.15vw, 2.75rem);
+  padding: 0 0.25rem 0 0;
+  font-size: clamp(1.74rem, 3.35vw, 2.95rem);
   line-height: 1.34;
   text-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
   overflow-wrap: anywhere;
@@ -278,20 +278,26 @@ body {
   white-space: normal;
   flex: 1 1 auto;
   min-height: 0;
-  max-width: min(92%, 56ch);
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  overflow: auto;
+  margin: 0;
 }
 
 .problem-panel.answer-visible .problem-prompt {
-  padding-bottom: clamp(8.5rem, 18vh, 13rem);
+  padding-bottom: clamp(6.4rem, 13vh, 9.6rem);
 }
 
 .problem-prompt.dense {
-  font-size: clamp(1.38rem, 2.75vw, 2.32rem);
+  font-size: clamp(1.22rem, 2.45vw, 2.06rem);
 }
 
 .problem-prompt.ultra-dense {
-  font-size: clamp(1.15rem, 2.25vw, 1.92rem);
+  font-size: clamp(0.98rem, 1.95vw, 1.56rem);
+}
+
+.problem-prompt.max-dense {
+  font-size: clamp(1.08rem, 2.2vw, 1.78rem);
 }
 
 .problem-prompt .mjx-container {
@@ -303,8 +309,11 @@ body {
 }
 
 .problem-prompt .mjx-container[jax="CHTML"][display="true"] {
-  overflow-x: visible !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
   max-width: 100% !important;
+  white-space: normal !important;
+  padding-bottom: 0.1rem;
 }
 
 .problem-prompt .mjx-container * {
@@ -334,7 +343,7 @@ body {
   border-radius: 0.88rem;
   border: 1px solid rgba(255, 255, 255, 0.32);
   background: rgba(157, 34, 53, 0.36);
-  padding: 0.9rem 1rem;
+  padding: 0.5rem 0.8rem;
   transform: translateY(calc(100% + 1rem));
   opacity: 0;
   transition: transform 320ms ease, opacity 220ms ease;
@@ -347,13 +356,16 @@ body {
 
 .answer-content {
   text-align: right;
-  font-size: clamp(1.46rem, 3vw, 2.58rem);
+  font-size: clamp(1.08rem, 2.02vw, 1.68rem);
+  max-height: clamp(74px, 14vh, 130px);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .answer-solution {
-  margin-top: 0.75rem;
+  margin-top: 0.45rem;
   border-top: 1px solid rgba(255, 255, 255, 0.3);
-  padding-top: 0.7rem;
+  padding-top: 0.42rem;
 }
 
 @keyframes projector-timer-blink {

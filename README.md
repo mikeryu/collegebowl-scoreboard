@@ -57,9 +57,10 @@ Notes:
 4. Use score +/- and manual claim controls when needed.
 
 Important behavior:
+- If no game `.tex` is loaded, the `Live` tab is visibly locked and controls are disabled.
 - Once game has started, only team names can be changed from Setup.
 - Timer/config and question-file changes are locked until `Full Reset`.
-- Use `Full Reset` in Live to return to pregame and unlock full setup edits.
+- Use `Full Reset` in Setup to return to pregame and unlock full setup edits.
 
 ### 5) Question file format requirements
 
