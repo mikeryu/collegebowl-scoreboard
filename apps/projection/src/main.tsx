@@ -181,7 +181,8 @@ const convertMixedLineToTeX = (line: string): string => {
     parts.push(`\\text{${escapeTeXText(textChunk)}}`);
   }
 
-  return parts.join(" ");
+  // Math mode ignores normal spaces, so join segments with explicit TeX space.
+  return parts.join(" \\ ");
 };
 
 const normalizeTeX = (text: string): string => {

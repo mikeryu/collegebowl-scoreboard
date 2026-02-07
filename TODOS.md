@@ -366,6 +366,10 @@ Current phase: `Phase 2 - Feature Hardening`
 
 - [x] Rebuild and refresh root unsigned macOS zip artifact after `\allowbreak` fix
 
+## In Progress: Mixed Text/Math Boundary Spacing Fix
+
+- [x] Fix projection rendering where math and text concatenate (e.g. `45coat`, `x$\\%`) in mixed TeX/plaintext prompts
+
 ## In Progress: Round Expiry + Switch Claim Stability
 
 - [x] Prevent round timer expiry from auto-changing game phase/state
