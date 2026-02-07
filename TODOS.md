@@ -3,6 +3,14 @@
 Last updated: February 6, 2026
 Current phase: `Phase 2 - Feature Hardening`
 
+## In Progress: Queue Height Independence + Setup Overflow Fix
+
+- [x] Queue panel height independence
+  - [x] keep queue panel height independent from controller panel height
+  - [x] keep queue item vertical size consistent regardless of frame height
+- [x] Setup horizontal overflow fix
+  - [x] remove unnecessary horizontal scrollbar on setup page
+
 ## In Progress: Live Gating + Disabled Clarity + Scroll Performance Pass
 
 - [x] Remove launch modal flow
