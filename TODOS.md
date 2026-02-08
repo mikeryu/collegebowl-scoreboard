@@ -3,6 +3,188 @@
 Last updated: February 6, 2026
 Current phase: `Phase 2 - Feature Hardening`
 
+## In Progress: Branded Pregame/Completion Screens (Projection)
+
+- [x] Replace text-only standby/completion with dedicated branded screens
+  - [x] pregame screen uses event branding and clear “ready” state
+  - [x] completion screen uses event branding and clear “complete” state
+  - [x] hide regular question prompt/label content during these screens
+- [x] Remove ugly TeX text concatenation path for start/end messages
+  - [x] switch control standby/end prompt payloads to simple sentinel text
+  - [x] keep game-complete detection robust for projection mode switching
+
+## In Progress: Event-Branded Standby + End-Game Messaging
+
+- [x] Standby screen polish
+  - [x] replace default standby copy with event-branded message
+  - [x] include explicit line break for `Westmont College` / `Math Field Day`
+- [x] End-game screen polish
+  - [x] replace plain game-complete copy with branded closer
+  - [x] keep `GAME COMPLETE` marker for existing detection logic
+
+## In Progress: Projector Close/Open Click-Through Guard
+
+- [x] Prevent immediate reopen after hold-close
+  - [x] add short open-projector cooldown after close action completes
+  - [x] ensure residual mouse-up/click does not reopen projector
+
+## In Progress: Button Feedback Consistency + Load CTA Priority
+
+- [x] Red button interaction consistency
+  - [x] add clear hover/press feedback for all red CTA buttons
+- [x] Setup load CTA emphasis
+  - [x] make `Load .tex` visually prominent (red) when no file is loaded
+  - [x] keep `Load .tex` feedback consistent with other clickable controls
+
+## In Progress: Queue Height Independence + Setup Overflow Fix
+
+- [x] Queue panel height independence
+  - [x] keep queue panel height independent from controller panel height
+  - [x] keep queue item vertical size consistent regardless of frame height
+- [x] Setup horizontal overflow fix
+  - [x] remove unnecessary horizontal scrollbar on setup page
+
+## In Progress: Live Gating + Disabled Clarity + Scroll Performance Pass
+
+- [x] Remove launch modal flow
+  - [x] remove startup load modal from control view
+  - [x] replace with obvious Live-tab “load game required” lock messaging
+- [x] Setup disabled-state clarity
+  - [x] make locked setup controls visibly grayed out
+  - [x] make locked file actions clearly unavailable while game is active
+- [x] Framerate/scroll optimization pass
+  - [x] reduce expensive paint/compositing work in controller panels
+  - [x] improve scroll container performance without removing scrolling
+
+## In Progress: Preview Accordion + Projector Answer Sizing
+
+- [x] Projector answer box sizing rebalance
+  - [x] reduce answer drawer footprint and answer text size
+  - [x] reserve safe space so answer never clips into question
+  - [x] allow slightly larger question text after rebalance
+- [x] Controller preview accordion behavior
+  - [x] make question preview collapsible/expandable
+  - [x] collapsed state shows round + truncated question only
+  - [x] expanded state grows downward below controller panels
+- [x] Controller scrolling behavior
+  - [x] re-enable whole-page vertical scrolling
+  - [x] keep queue/preview internals scroll-safe
+
+## In Progress: Control UX Polish + Testing Mode Visual Alert
+
+- [ ] Header + panel micro-typography pass
+- [x] Header + panel micro-typography pass
+  - [x] remove extra spacing above `Projector Controls`, `Global Game Controls`, `State Controls`
+  - [x] make those three headers smaller and bold
+- [x] Top bar reset relocation
+  - [x] move full reset action into title row left of Live/Setup tabs
+  - [x] remove the bottom reset panel from Live tab
+- [x] Queue and preview independent scrolling
+  - [x] keep queue list as independent vertical scroller
+  - [x] make preview independently scrollable (vertical + horizontal for wide LaTeX)
+  - [x] keep right column width stable with very long expressions
+- [x] Testing Mode feature
+  - [x] add `testingMode` to shared app state and command contracts
+  - [x] add reducer support in main process with reveal hold bypass
+  - [x] add real-time Setup toggle (`Testing Mode`)
+  - [x] bypass all hold interactions when enabled
+  - [x] cancel in-flight hold progress when toggle flips
+- [x] Testing Mode visual alarm
+  - [x] blink/recolor `Scoreboard Control` title while enabled
+  - [x] add bright blinking border around control shell while enabled
+  - [x] add reduced-motion fallback for accessibility
+- [x] Validate
+  - [x] run `bun run lint`
+  - [x] run `bun run typecheck`
+
+## In Progress: Queue Semantics + Controller Scroll Performance
+
+- [x] Queue badge semantics update
+  - [x] replace misleading `QUEUED` pill with `CURRENT` / `NEXT` pills
+  - [x] keep selected preview row visual state (blue) separate from current/next state
+  - [x] add helper copy near `USE NOW` for selected preview intent
+- [x] Reset placement refinement
+  - [x] move full reset control from title bar to bottom of Setup tab
+- [x] Queue density + preview flow
+  - [x] cap queue row height to compact excerpt-style cards
+  - [x] keep queue + preview independently scrollable
+- [x] Controller scroll performance hardening
+  - [x] disable full-document scrolling and keep viewport-locked shell
+  - [x] make Live/Setup panels internally scrollable to avoid page-level jank
+
+## In Progress: Stability Fixes (Projection + Timer + End-State)
+
+- [x] Projection LaTeX stability (highest priority)
+  - [x] remove clipping/regression in projected question rendering
+  - [x] keep long inline/display math readable without truncation
+- [x] Pause indicator cadence fix
+  - [x] make paused clocks alternate exactly 1s time / 1s pause glyph
+  - [x] avoid state-sync jitter resetting blink interval
+- [x] End-of-game controls gating
+  - [x] disable live gameplay controls when queue is exhausted
+  - [x] keep queue `USE NOW` path available to re-enable gameplay controls
+- [x] Setup Testing Mode toggle polish
+  - [x] move toggle to bottom of Setup tab
+  - [x] use larger visual switch style with balanced spacing
+
+## In Progress: Queue Density + Break Parsing Hotfix
+
+- [x] Queue readability/layout refinements
+  - [x] increase queue item height so excerpt text fits vertically
+  - [x] reduce visual dead space between queue controls and preview panel
+  - [x] append `(Testing Mode)` in title while testing mode is enabled
+- [x] TeX break robustness
+  - [x] handle `\vspace{...}` and explicit TeX line-break markers without literal leakage
+  - [x] restore stable intentional line-breaking behavior to avoid projection clipping regressions
+
+## In Progress: Live Layout Reframe + Button Feedback
+
+- [x] Live layout structure
+  - [x] move question preview to a dedicated row under title bar
+  - [x] split lower row into controllers (left) + queue (right)
+  - [x] keep preview and queue heights bounded with internal scrolling only
+- [x] Queue readability
+  - [x] increase queue card height to fit excerpt text comfortably
+  - [x] sanitize queue snippets to avoid raw TeX command leakage
+  - [x] tighten queue-preview spacing
+- [x] Button interaction feedback
+  - [x] add non-hold press feedback for all enabled buttons
+
+## In Progress: Projection No-Clip Hotfix + Queue Single-Line Truncation
+
+- [x] Projection no-clip hardening
+  - [x] tighten line-break injection for mixed text/math rendering
+  - [x] apply more aggressive long-question font scaling
+- [x] Queue snippet tightening
+  - [x] force one-line snippet with earlier truncation and ellipsis
+
+## In Progress: Preview Follow Mode + Compact Grid Layout
+
+- [x] Preview behavior
+  - [x] default preview follows current round progression
+  - [x] queue click temporarily pins preview to selected round
+  - [x] clear pinned selection automatically on round advancement
+- [x] Live layout ordering
+  - [x] move question preview panel to bottom row
+  - [x] keep queue and preview height-bounded with internal scroll
+- [x] Compact preview content
+  - [x] render Toss-up and Follow-up as 2x2 compact card grid
+
+## In Progress: Queue Clarity + TeX Preview Parity + Performance
+
+- [x] Queue selected-vs-active visual distinction
+  - [x] keep `CURRENT`/`NEXT` pills tied to real sequence state
+  - [x] keep selected preview row styling distinct from current/next state
+- [x] Shared TeX normalization and rendering parity
+  - [x] move TeX normalization into shared utility and reuse in projection/control
+  - [x] render controller round preview with MathJax
+- [x] Runtime smoothness pass
+  - [x] skip no-op state broadcasts in main process
+  - [x] memoize expensive TeX rendering in projection/control
+- [x] Validation + release artifact refresh
+  - [x] run lint/typecheck/tests
+  - [x] rebuild unsigned mac zip artifact
+
 ## In Progress: UX Balance + Control Affordance Pass
 
 - [x] Projection UX rebalance
@@ -366,9 +548,23 @@ Current phase: `Phase 2 - Feature Hardening`
 
 - [x] Rebuild and refresh root unsigned macOS zip artifact after `\allowbreak` fix
 
+## In Progress: Currency Dollar Robustness
+
+- [ ] Normalize accidental currency forms like `\\$$45$` into literal currency tokens before projection rendering
+- [ ] Document recommended `.tex` writing conventions for currency/percent/math boundaries
+
 ## In Progress: Mixed Text/Math Boundary Spacing Fix
 
 - [x] Fix projection rendering where math and text concatenate (e.g. `45coat`, `x$\\%`) in mixed TeX/plaintext prompts
+
+## In Progress: Currency Dollar Robustness
+
+- [x] Normalize accidental currency forms like `\\$$45$` into literal currency tokens before projection rendering
+- [x] Document recommended `.tex` writing conventions for currency/percent/math boundaries
+
+## In Progress: Math-Percent Boundary Canonicalization
+
+- [x] Canonicalize `$...$\\%` patterns to `$...\\%$` so projected output renders `%` without literal backslash
 
 ## In Progress: Round Expiry + Switch Claim Stability
 

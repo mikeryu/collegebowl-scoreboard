@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import type { AppCommand, AppState, SetupPayload, TeamSide } from "@scoreboard/shared";
+import { normalizeTeXForDisplay, type AppCommand, type AppState, type SetupPayload, type TeamSide } from "@scoreboard/shared";
+import { MathJax, MathJaxContext } from "better-react-mathjax";
 import "./styles.css";
 import warningSoundDataUrl from "./assets/legacy-warning-dataurl.txt?raw";
 import expiredSoundDataUrl from "./assets/legacy-expired-dataurl.txt?raw";
@@ -39,8 +40,11 @@ const MAX_ROUNDS = 200;
 const REVEAL_HOLD_MS = 1000;
 const OVERRIDE_HOLD_MS = 2000;
 const PROJECTOR_CLOSE_HOLD_MS = 1000;
+const PROJECTOR_REOPEN_GUARD_MS = 600;
 const GAME_RESET_HOLD_MS = 3000;
 const USE_NOW_HOLD_MS = 2000;
+const EVENT_STANDBY_PROMPT = "PREGAME STANDBY";
+const EVENT_COMPLETE_PROMPT = "GAME COMPLETE";
 
 const TEX_TEMPLATE = String.raw`% Scoreboard Game Template (.tex)
 % Valid and compilable in Overleaf.
@@ -153,6 +157,22 @@ const extractEnv = (source: string, envName: string): string | null => {
 
 const stripTrailingPeriod = (text: string): string => text.trim().replace(/\.\s*$/, "");
 
+const queueSnippet = (text: string): string =>
+  text
+    .replace(/\\vspace\*?\{[^}]*\}/g, " ")
+    .replace(/\\(?:smallskip|medskip|bigskip)\b/g, " ")
+    .replace(/\\\\(?:\[[^\]]*\])?/g, " ")
+    .replace(/\\[a-zA-Z]+\*?(?:\{[^}]*\})?/g, " ")
+    .replace(/[$]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const queueSnippetSingleLine = (text: string, maxChars: number = 78): string => {
+  const normalized = queueSnippet(text);
+  if (normalized.length <= maxChars) return normalized;
+  return `${normalized.slice(0, maxChars).trimEnd()}...`;
+};
+
 const parseRoundsFromTex = (rawText: string): ParseResult => {
   const errors: string[] = [];
   const text = rawText.replace(/\r\n/g, "\n").trim();
@@ -247,6 +267,40 @@ const playExpiredAlarm = (): void => {
   playLegacySound(expiredSoundDataUrl);
 };
 
+const MATHJAX_CONFIG = {
+  tex: {
+    inlineMath: [
+      ["$", "$"],
+      ["\\(", "\\)"]
+    ],
+    displayMath: [
+      ["$$", "$$"],
+      ["\\[", "\\]"]
+    ],
+    processEscapes: true
+  },
+  chtml: {
+    displayOverflow: "linebreak",
+    linebreaks: {
+      automatic: true,
+      width: "container"
+    }
+  },
+  svg: {
+    displayOverflow: "linebreak",
+    linebreaks: {
+      automatic: true,
+      width: "container"
+    }
+  }
+} as const;
+
+const PreviewTeX = React.memo(function PreviewTeX({ text }: { text: string }) {
+  const normalized = useMemo(() => normalizeTeXForDisplay(text), [text]);
+  if (!normalized) return null;
+  return <MathJax dynamic>{normalized}</MathJax>;
+});
+
 function send(command: AppCommand): void {
   window.scoreboardAPI?.sendCommand(command);
 }
@@ -258,9 +312,10 @@ function App() {
   const [rightHeld, setRightHeld] = useState(false);
   const [rounds, setRounds] = useState<RoundItem[]>([]);
   const [selectedRoundIndex, setSelectedRoundIndex] = useState(0);
+  const [previewPinned, setPreviewPinned] = useState(false);
+  const [previewExpanded, setPreviewExpanded] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
-  const [showUploadModal, setShowUploadModal] = useState(true);
 
   const previousTimesRef = useRef<{ round: number; question: number } | null>(null);
   const previousPhaseRef = useRef<AppState["phase"] | null>(null);
@@ -273,6 +328,7 @@ function App() {
   const projectorCloseHoldTimeoutRef = useRef<number | null>(null);
   const projectorCloseHoldTickRef = useRef<number | null>(null);
   const projectorCloseHoldStartedAtRef = useRef<number | null>(null);
+  const projectorReopenGuardUntilRef = useRef<number>(0);
   const gameResetHoldTimeoutRef = useRef<number | null>(null);
   const gameResetHoldTickRef = useRef<number | null>(null);
   const gameResetHoldStartedAtRef = useRef<number | null>(null);
@@ -311,7 +367,8 @@ function App() {
   const currentRoundIndex = state?.currentRoundIndex ?? 0;
   const currentRound = rounds[currentRoundIndex] ?? null;
   const queueExhausted = Boolean(state && gameLoaded && !currentRound && currentRoundIndex >= rounds.length);
-  const selectedRound = rounds[selectedRoundIndex] ?? null;
+  const previewRoundIndex = previewPinned ? selectedRoundIndex : currentRoundIndex;
+  const selectedRound = rounds[previewRoundIndex] ?? null;
 
   const pushRoundPhase = useCallback((round: RoundItem, phase: QuestionPhase) => {
     if (phase === "tossup") {
@@ -397,7 +454,7 @@ function App() {
       send({
         type: "question:set-content",
         payload: {
-          prompt: "GAME COMPLETE - All rounds have been played.",
+          prompt: EVENT_COMPLETE_PROMPT,
           answer: "",
           solution: ""
         }
@@ -435,7 +492,7 @@ function App() {
       send({
         type: "question:set-content",
         payload: {
-          prompt: "GAME COMPLETE - All rounds have been played.",
+          prompt: EVENT_COMPLETE_PROMPT,
           answer: "",
           solution: ""
         }
@@ -493,38 +550,25 @@ function App() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!state) {
-      setShowPauseGlyph(false);
-      return;
-    }
-
-    const roundPaused =
-      state.started && state.phase !== "round-ended" && !state.roundTimer.running && state.roundTimer.secondsRemaining > 0;
-    const questionPaused =
+  const anyPaused = Boolean(
+    state &&
       state.started &&
       state.phase !== "round-ended" &&
-      !state.questionTimer.running &&
-      state.questionTimer.secondsRemaining > 0;
-    const anyPaused = roundPaused || questionPaused;
+      ((!state.roundTimer.running && state.roundTimer.secondsRemaining > 0) ||
+        (!state.questionTimer.running && state.questionTimer.secondsRemaining > 0))
+  );
 
+  useEffect(() => {
     if (!anyPaused) {
       setShowPauseGlyph(false);
       return;
     }
 
-    setShowPauseGlyph(true);
+    // Alternate exactly 1000ms clock then 1000ms pause glyph.
+    setShowPauseGlyph(false);
     const intervalId = window.setInterval(() => setShowPauseGlyph((prev) => !prev), 1000);
     return () => window.clearInterval(intervalId);
-  }, [
-    state,
-    state?.phase,
-    state?.started,
-    state?.roundTimer.running,
-    state?.roundTimer.secondsRemaining,
-    state?.questionTimer.running,
-    state?.questionTimer.secondsRemaining
-  ]);
+  }, [anyPaused]);
 
   const handleTexFile = useCallback(
     async (file: File) => {
@@ -549,15 +593,15 @@ function App() {
 
         setRounds(parsed.rounds);
         setSelectedRoundIndex(0);
+        setPreviewPinned(false);
         setUploadedFileName(file.name);
-        setShowUploadModal(false);
         setUploadError(null);
 
         if (parsed.rounds[0]) {
           send({
             type: "question:set-content",
             payload: {
-              prompt: "Awaiting game start",
+              prompt: EVENT_STANDBY_PROMPT,
               answer: parsed.rounds[0].tossupAnswer,
               solution: ""
             }
@@ -650,10 +694,7 @@ function App() {
       if (event.repeat && !["w", "s"].includes(key.toLowerCase())) return;
 
       if (key === "Escape") {
-        if (!gameLoaded) {
-          setShowUploadModal(true);
-          return;
-        }
+        if (!gameLoaded) return;
         send({ type: "round:toggle" });
         return;
       }
@@ -887,11 +928,86 @@ function App() {
     return withOverride(actions);
   }, [state]);
 
+  const testingModeActive = state?.testingMode ?? false;
+
+  useEffect(() => {
+    if (!testingModeActive) return;
+
+    if (revealHoldTimeoutRef.current) {
+      window.clearTimeout(revealHoldTimeoutRef.current);
+      revealHoldTimeoutRef.current = null;
+    }
+    if (revealHoldTickRef.current) {
+      window.clearInterval(revealHoldTickRef.current);
+      revealHoldTickRef.current = null;
+    }
+    revealHoldStartedAtRef.current = null;
+    setRevealHoldProgress(0);
+    setRevealHoldRemainingMs(REVEAL_HOLD_MS);
+
+    if (actionHoldTimeoutRef.current) {
+      window.clearTimeout(actionHoldTimeoutRef.current);
+      actionHoldTimeoutRef.current = null;
+    }
+    if (actionHoldTickRef.current) {
+      window.clearInterval(actionHoldTickRef.current);
+      actionHoldTickRef.current = null;
+    }
+    actionHoldStartedAtRef.current = null;
+    setActionHoldProgress(0);
+    setActionHoldRemainingMs(REVEAL_HOLD_MS);
+    setActionHoldKey(null);
+
+    if (projectorCloseHoldTimeoutRef.current) {
+      window.clearTimeout(projectorCloseHoldTimeoutRef.current);
+      projectorCloseHoldTimeoutRef.current = null;
+    }
+    if (projectorCloseHoldTickRef.current) {
+      window.clearInterval(projectorCloseHoldTickRef.current);
+      projectorCloseHoldTickRef.current = null;
+    }
+    projectorCloseHoldStartedAtRef.current = null;
+    setProjectorCloseHoldProgress(0);
+    setProjectorCloseHoldRemainingMs(PROJECTOR_CLOSE_HOLD_MS);
+
+    if (gameResetHoldTimeoutRef.current) {
+      window.clearTimeout(gameResetHoldTimeoutRef.current);
+      gameResetHoldTimeoutRef.current = null;
+    }
+    if (gameResetHoldTickRef.current) {
+      window.clearInterval(gameResetHoldTickRef.current);
+      gameResetHoldTickRef.current = null;
+    }
+    gameResetHoldStartedAtRef.current = null;
+    setGameResetHoldProgress(0);
+    setGameResetHoldRemainingMs(GAME_RESET_HOLD_MS);
+
+    if (useNowHoldTimeoutRef.current) {
+      window.clearTimeout(useNowHoldTimeoutRef.current);
+      useNowHoldTimeoutRef.current = null;
+    }
+    if (useNowHoldTickRef.current) {
+      window.clearInterval(useNowHoldTickRef.current);
+      useNowHoldTickRef.current = null;
+    }
+    useNowHoldStartedAtRef.current = null;
+    setUseNowHoldProgress(0);
+    setUseNowHoldRemainingMs(USE_NOW_HOLD_MS);
+  }, [testingModeActive]);
+
+  useEffect(() => {
+    // Round progression should clear manual preview selection and follow live round.
+    setPreviewPinned(false);
+    setSelectedRoundIndex(currentRoundIndex);
+  }, [currentRoundIndex]);
+
   if (!state) {
     return <main className="control-shell" />;
   }
 
   const liveOpsEnabled = gameLoaded && state.projectionOpen;
+  const gameplayControlsEnabled = liveOpsEnabled && !queueExhausted;
+  const bypassHolds = state.testingMode;
   const roundPaused =
     state.started && state.phase !== "round-ended" && !state.roundTimer.running && state.roundTimer.secondsRemaining > 0;
   const questionPaused =
@@ -907,8 +1023,15 @@ function App() {
     send({ type: "claim:manual-set", side: state.claimOwner === side ? "none" : side });
   };
 
+  const actionDisplayLabel = (action: LiveAction): string => {
+    if (!bypassHolds || !action.requiresHold) return action.label;
+    return action.label
+      .replace(/^Hold:\s*/i, "")
+      .replace(/^HOLD TO /i, "");
+  };
+
   const runAction = (action: LiveAction): void => {
-    setLastActionLabel(action.label);
+    setLastActionLabel(actionDisplayLabel(action));
     setActiveActionKey(action.key);
     send(action.command);
     window.setTimeout(() => setActiveActionKey((current) => (current === action.key ? null : current)), 220);
@@ -959,6 +1082,12 @@ function App() {
   };
 
   const projectionAction = (type: "projection:open" | "projection:refresh" | "projection:close"): void => {
+    if (type === "projection:open" && Date.now() < projectorReopenGuardUntilRef.current) {
+      return;
+    }
+    if (type === "projection:close") {
+      projectorReopenGuardUntilRef.current = Date.now() + PROJECTOR_REOPEN_GUARD_MS;
+    }
     send({ type });
   };
 
@@ -1044,7 +1173,7 @@ function App() {
 
   const beginUseNowHold = (): void => {
     if (useNowHoldTimeoutRef.current) return;
-    if (!gameLoaded || !rounds[selectedRoundIndex]) return;
+    if (!gameLoaded || !rounds[previewRoundIndex]) return;
     useNowHoldStartedAtRef.current = performance.now();
     setUseNowHoldProgress(0);
     setUseNowHoldRemainingMs(USE_NOW_HOLD_MS);
@@ -1057,7 +1186,7 @@ function App() {
     }, 40);
 
     useNowHoldTimeoutRef.current = window.setTimeout(() => {
-      send({ type: "flow:jump-round", roundIndex: selectedRoundIndex });
+      send({ type: "flow:jump-round", roundIndex: previewRoundIndex });
       setUseNowHoldProgress(0);
       setUseNowHoldRemainingMs(USE_NOW_HOLD_MS);
       useNowHoldStartedAtRef.current = null;
@@ -1114,17 +1243,30 @@ function App() {
   const phaseLabel = state.phase.replace(/:/g, " ");
 
   return (
-    <main className="control-shell">
+    <MathJaxContext config={MATHJAX_CONFIG}>
+      <main className={`control-shell ${state.testingMode ? "testing-mode" : ""}`}>
       <header className="topbar">
-        <h1>Scoreboard Control</h1>
-        <div className="tab-row">
-          <button className={activeTab === "live" ? "active" : ""} onClick={() => setActiveTab("live")}>Live</button>
-          <button className={activeTab === "setup" ? "active" : ""} onClick={() => setActiveTab("setup")}>Setup</button>
+        <h1 className="control-title">Scoreboard Control{state.testingMode ? " (Testing Mode)" : ""}</h1>
+        <div className="topbar-controls">
+          <div className="tab-row">
+            <button className={activeTab === "live" ? "active" : ""} onClick={() => setActiveTab("live")}>Live</button>
+            <button className={activeTab === "setup" ? "active" : ""} onClick={() => setActiveTab("setup")}>Setup</button>
+          </div>
         </div>
       </header>
 
       {activeTab === "live" ? (
-        <section className="live-layout">
+        <section className={`live-layout ${!gameLoaded ? "locked" : ""}`}>
+          {!gameLoaded ? (
+            <section className="panel live-load-required">
+              <p className="live-required-title">GAME FILE REQUIRED</p>
+              <p className="live-required-copy">
+                Live controls are disabled until a valid game `.tex` file is loaded from Setup.
+              </p>
+              <button className="primary" onClick={() => setActiveTab("setup")}>Go To Setup And Load Game</button>
+            </section>
+          ) : null}
+          <div className="live-main-grid">
           <div className="left-column">
             <section className="compact-strip panel">
               <div
@@ -1158,12 +1300,12 @@ function App() {
                 <div className="score-line">
                   <strong>{state.leftTeam.score}</strong>
                   <span>
-                    <button onClick={() => changeScore("left", 1)} disabled={!liveOpsEnabled}>+1</button>
-                    <button onClick={() => changeScore("left", -1)} disabled={!liveOpsEnabled}>-1</button>
+                    <button onClick={() => changeScore("left", 1)} disabled={!gameplayControlsEnabled}>+1</button>
+                    <button onClick={() => changeScore("left", -1)} disabled={!gameplayControlsEnabled}>-1</button>
                     <button
                       className={state.claimOwner === "left" ? "claim-btn active" : "claim-btn"}
                       onClick={() => toggleManualClaim("left")}
-                      disabled={!liveOpsEnabled}
+                      disabled={!gameplayControlsEnabled}
                     >
                       Claim
                     </button>
@@ -1175,12 +1317,12 @@ function App() {
                 <div className="score-line">
                   <strong>{state.rightTeam.score}</strong>
                   <span>
-                    <button onClick={() => changeScore("right", 1)} disabled={!liveOpsEnabled}>+1</button>
-                    <button onClick={() => changeScore("right", -1)} disabled={!liveOpsEnabled}>-1</button>
+                    <button onClick={() => changeScore("right", 1)} disabled={!gameplayControlsEnabled}>+1</button>
+                    <button onClick={() => changeScore("right", -1)} disabled={!gameplayControlsEnabled}>-1</button>
                     <button
                       className={state.claimOwner === "right" ? "claim-btn active" : "claim-btn"}
                       onClick={() => toggleManualClaim("right")}
-                      disabled={!liveOpsEnabled}
+                      disabled={!gameplayControlsEnabled}
                     >
                       Claim
                     </button>
@@ -1191,49 +1333,58 @@ function App() {
 
             <section className="presenter-layout">
               <article className="panel presenter-panel">
-                <p className="label">Projector Controls</p>
+                <p className="section-title">Projector Controls</p>
                 <div className="global-controls projector-controls">
                   {!state.projectionOpen ? (
                     <button className="open-projector-btn" onClick={() => projectionAction("projection:open")}>Open Projector</button>
                   ) : (
-                    <button
-                      className="reveal-hold hold-close-projector"
-                      onMouseDown={beginProjectorCloseHold}
-                      onMouseUp={cancelProjectorCloseHold}
-                      onMouseLeave={cancelProjectorCloseHold}
-                      onTouchStart={beginProjectorCloseHold}
-                      onTouchEnd={cancelProjectorCloseHold}
-                      onTouchCancel={cancelProjectorCloseHold}
-                    >
-                      <span
-                        className="hold-fill"
-                        style={{ transform: `scaleX(${projectorCloseHoldProgress})` }}
-                      />
-                      <span className="hold-label">
-                        HOLD TO CLOSE PROJECTOR ({(projectorCloseHoldRemainingMs / 1000).toFixed(2)}s)
-                      </span>
-                    </button>
+                    bypassHolds ? (
+                      <button
+                        className="hold-close-projector"
+                        onClick={() => projectionAction("projection:close")}
+                      >
+                        CLOSE PROJECTOR
+                      </button>
+                    ) : (
+                      <button
+                        className="reveal-hold hold-close-projector"
+                        onMouseDown={beginProjectorCloseHold}
+                        onMouseUp={cancelProjectorCloseHold}
+                        onMouseLeave={cancelProjectorCloseHold}
+                        onTouchStart={beginProjectorCloseHold}
+                        onTouchEnd={cancelProjectorCloseHold}
+                        onTouchCancel={cancelProjectorCloseHold}
+                      >
+                        <span
+                          className="hold-fill"
+                          style={{ transform: `scaleX(${projectorCloseHoldProgress})` }}
+                        />
+                        <span className="hold-label">
+                          HOLD TO CLOSE PROJECTOR ({(projectorCloseHoldRemainingMs / 1000).toFixed(2)}s)
+                        </span>
+                      </button>
+                    )
                   )}
                   <button onClick={() => projectionAction("projection:refresh")}>Refresh Projector</button>
                 </div>
               </article>
 
               <article className="panel presenter-panel">
-                <p className="label">Global Game Controls</p>
+                <p className="section-title">Global Game Controls</p>
                 <div className="global-controls game-controls">
                   <button
                     className={state.roundTimer.running ? "round-toggle-btn pause-mode" : "round-toggle-btn start-mode"}
                     onClick={() => send({ type: "round:toggle" })}
-                    disabled={!liveOpsEnabled}
+                    disabled={!gameplayControlsEnabled}
                   >
                     {state.roundTimer.running ? "Pause Round" : "Start Round"}
                   </button>
-                  <button onClick={() => send({ type: "question:toggle-pause" })} disabled={!liveOpsEnabled}>Pause/Resume Question Timer</button>
+                  <button onClick={() => send({ type: "question:toggle-pause" })} disabled={!gameplayControlsEnabled}>Pause/Resume Question Timer</button>
                 </div>
               </article>
 
               <article className="panel presenter-panel">
-                <p className="label">State Controls</p>
+                <p className="section-title">State Controls</p>
                 <div className="transition-graph">
                   <div className="graph-col">
                     <p className="label">Just Selected</p>
@@ -1245,7 +1396,7 @@ function App() {
                     <p className="label">Buttons Available Now</p>
                     <div className="choices-stack">
                       {liveActions.map((action) => (
-                        action.requiresHold ? (
+                        action.requiresHold && !bypassHolds ? (
                           <button
                             key={action.key}
                             className={[
@@ -1266,7 +1417,7 @@ function App() {
                             }
                             onTouchEnd={action.holdKind === "reveal" ? cancelRevealHold : cancelActionHold}
                             onTouchCancel={action.holdKind === "reveal" ? cancelRevealHold : cancelActionHold}
-                            disabled={!liveOpsEnabled}
+                            disabled={!gameplayControlsEnabled}
                           >
                             <span
                               className="hold-fill"
@@ -1281,7 +1432,7 @@ function App() {
                               }}
                             />
                               <span className="hold-label">
-                                {action.label} (
+                                {actionDisplayLabel(action)} (
                                 {(
                                   (
                                     action.holdKind === "reveal"
@@ -1305,9 +1456,9 @@ function App() {
                               .filter(Boolean)
                               .join(" ")}
                             onClick={() => runAction(action)}
-                            disabled={!liveOpsEnabled}
+                            disabled={!gameplayControlsEnabled}
                           >
-                            {action.label}
+                            {actionDisplayLabel(action)}
                           </button>
                         )
                       ))}
@@ -1334,7 +1485,7 @@ function App() {
                   <>
                     <p className="ok-inline">Loaded: {uploadedFileName || `${rounds.length} rounds`}</p>
                     {queueExhausted ? (
-                      <p className="warning-inline">End of game: all rounds in the queue have been played.</p>
+                      <p className="warning-inline">End of game: live gameplay controls are disabled until you load a round with USE NOW.</p>
                     ) : null}
                     {!state.projectionOpen ? (
                       <p className="warning-inline">Projector is closed. Open projector to enable live controls.</p>
@@ -1344,39 +1495,36 @@ function App() {
               </article>
             </section>
 
-            <section className="panel reset-panel">
-              <p className="label">Game Reset</p>
-              <button
-                className="reveal-hold reset-hold-btn"
-                onMouseDown={beginGameResetHold}
-                onMouseUp={cancelGameResetHold}
-                onMouseLeave={cancelGameResetHold}
-                onTouchStart={beginGameResetHold}
-                onTouchEnd={cancelGameResetHold}
-                onTouchCancel={cancelGameResetHold}
-                disabled={!gameLoaded}
-              >
-                <span className="hold-fill" style={{ transform: `scaleX(${gameResetHoldProgress})` }} />
-                <span className="hold-label">
-                  HOLD TO FULL RESET ({(gameResetHoldRemainingMs / 1000).toFixed(2)}s)
-                </span>
-              </button>
-              <p className="hint">Resets scores/timers/state to pregame. Loaded question file stays in memory.</p>
-            </section>
           </div>
 
           <aside className="right-column panel">
             <p className="label">Questions Queue</p>
             <div className="queue-list">
               {rounds.map((round, index) => (
-                <button
-                  key={round.id}
-                  className={index === currentRoundIndex ? "queue-item active" : "queue-item"}
-                  onClick={() => setSelectedRoundIndex(index)}
-                >
-                  <strong>{round.title}</strong>
-                  <span>{round.tossup.slice(0, 100)}</span>
-                </button>
+                (() => {
+                  const isCurrent = index === currentRoundIndex;
+                  const isNext = index === currentRoundIndex + 1;
+                  const isSelected = previewPinned && index === selectedRoundIndex && !isCurrent;
+                  return (
+                    <button
+                      key={round.id}
+                      className={["queue-item", isCurrent ? "active" : "", isSelected ? "selected" : ""].filter(Boolean).join(" ")}
+                      onClick={() => {
+                        setSelectedRoundIndex(index);
+                        setPreviewPinned(true);
+                      }}
+                    >
+                      <div className="queue-item-title-row">
+                        <strong>{round.title}</strong>
+                        <span className="queue-pills">
+                          {isCurrent ? <span className="queue-pill current">CURRENT</span> : null}
+                          {!isCurrent && isNext ? <span className="queue-pill next">NEXT</span> : null}
+                        </span>
+                      </div>
+                      <span>{queueSnippetSingleLine(round.tossup, 54)}</span>
+                    </button>
+                  );
+                })()
               ))}
             </div>
             <div className="queue-actions">
@@ -1392,34 +1540,101 @@ function App() {
               >
                 Next
               </button>
-              <button
-                className="reveal-hold use-now-hold-btn"
-                onMouseDown={beginUseNowHold}
-                onMouseUp={cancelUseNowHold}
-                onMouseLeave={cancelUseNowHold}
-                onTouchStart={beginUseNowHold}
-                onTouchEnd={cancelUseNowHold}
-                onTouchCancel={cancelUseNowHold}
-                disabled={!liveOpsEnabled}
-              >
-                <span className="hold-fill" style={{ transform: `scaleX(${useNowHoldProgress})` }} />
-                <span className="hold-label">USE NOW ({(useNowHoldRemainingMs / 1000).toFixed(2)}s)</span>
-              </button>
+              {bypassHolds ? (
+                <button
+                  className={`use-now-hold-btn ${previewRoundIndex !== currentRoundIndex ? "use-now-selected" : ""}`}
+                  onClick={() => send({ type: "flow:jump-round", roundIndex: previewRoundIndex })}
+                  disabled={!liveOpsEnabled || !rounds[previewRoundIndex]}
+                >
+                  USE NOW
+                </button>
+              ) : (
+                <button
+                  className={`reveal-hold use-now-hold-btn ${previewRoundIndex !== currentRoundIndex ? "use-now-selected" : ""}`}
+                  onMouseDown={beginUseNowHold}
+                  onMouseUp={cancelUseNowHold}
+                  onMouseLeave={cancelUseNowHold}
+                  onTouchStart={beginUseNowHold}
+                  onTouchEnd={cancelUseNowHold}
+                  onTouchCancel={cancelUseNowHold}
+                  disabled={!liveOpsEnabled}
+                >
+                  <span className="hold-fill" style={{ transform: `scaleX(${useNowHoldProgress})` }} />
+                  <span className="hold-label">USE NOW ({(useNowHoldRemainingMs / 1000).toFixed(2)}s)</span>
+                </button>
+              )}
             </div>
-            {selectedRound ? (
-              <div className="queue-preview">
-                <p><strong>{selectedRound.title}</strong></p>
-                <p><strong>Toss-up:</strong> {selectedRound.tossup}</p>
-                <p><strong>Toss-up Ans:</strong> {selectedRound.tossupAnswer}</p>
-                <p><strong>Follow-up:</strong> {selectedRound.followup}</p>
-                <p><strong>Follow-up Ans:</strong> {selectedRound.followupAnswer}</p>
+            <p className="queue-selection-hint">
+              {!selectedRound
+                ? "Select a round to preview."
+                : previewRoundIndex === currentRoundIndex
+                  ? "Viewing current round."
+                  : previewRoundIndex === currentRoundIndex + 1
+                    ? "Viewing next round in sequence."
+                    : "Selected preview. Click USE NOW to load this round."}
+            </p>
+          </aside>
+          </div>
+
+          <section className={`panel question-preview-panel ${previewExpanded ? "expanded" : "collapsed"}`}>
+            <button
+              className="preview-toggle"
+              onClick={() => setPreviewExpanded((prev) => !prev)}
+              type="button"
+            >
+              <span className="label">Question Preview</span>
+              <span className="preview-toggle-icon">{previewExpanded ? "▾" : "▸"}</span>
+            </button>
+            {!previewExpanded ? (
+              <div className="preview-collapsed-row">
+                {selectedRound ? (
+                  <>
+                    <strong>{selectedRound.title}</strong>
+                    <span>{queueSnippetSingleLine(selectedRound.tossup, 112)}</span>
+                  </>
+                ) : (
+                  <span>{gameLoaded ? "Select a round to preview." : "No rounds loaded yet."}</span>
+                )}
+              </div>
+            ) : selectedRound ? (
+              <div className="queue-preview compact-preview">
+                <div className="preview-header">
+                  <p><strong>{selectedRound.title}</strong></p>
+                  <span className="preview-mode">{previewPinned ? "SELECTED PREVIEW" : "LIVE FOLLOW MODE"}</span>
+                </div>
+                <div className="preview-row-wrap">
+                  <p className="preview-row-label"><strong>Toss up:</strong></p>
+                  <div className="preview-compact-row">
+                    <article className="preview-card preview-card-wide">
+                      <p className="preview-card-label">Toss Up Question (2/3)</p>
+                      <div className="preview-math-scroll"><div className="preview-math"><PreviewTeX text={selectedRound.tossup} /></div></div>
+                    </article>
+                    <article className="preview-card preview-card-narrow">
+                      <p className="preview-card-label">Toss Up Answer (1/3)</p>
+                      <div className="preview-math-scroll"><div className="preview-math"><PreviewTeX text={selectedRound.tossupAnswer} /></div></div>
+                    </article>
+                  </div>
+                </div>
+                <div className="preview-row-wrap">
+                  <p className="preview-row-label"><strong>Follow up:</strong></p>
+                  <div className="preview-compact-row">
+                    <article className="preview-card preview-card-wide">
+                      <p className="preview-card-label">Follow Up Question (2/3)</p>
+                      <div className="preview-math-scroll"><div className="preview-math"><PreviewTeX text={selectedRound.followup} /></div></div>
+                    </article>
+                    <article className="preview-card preview-card-narrow">
+                      <p className="preview-card-label">Follow Up Answer (1/3)</p>
+                      <div className="preview-math-scroll"><div className="preview-math"><PreviewTeX text={selectedRound.followupAnswer} /></div></div>
+                    </article>
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="queue-preview">
-                <p>{gameLoaded ? "All rounds in queue have been played." : "No rounds loaded yet."}</p>
+                <p>{gameLoaded ? "Select a round to preview." : "No rounds loaded yet."}</p>
               </div>
             )}
-          </aside>
+          </section>
         </section>
       ) : (
         <section className="setup-layout panel">
@@ -1439,7 +1654,7 @@ function App() {
                 onChange={(event) => setSetup((prev) => ({ ...prev, rightTeamName: event.target.value }))}
               />
             </div>
-            <div>
+            <div className={setupConfigLocked ? "locked-field" : ""}>
               <label>Round Seconds</label>
               <input
                 type="number"
@@ -1450,7 +1665,7 @@ function App() {
                 }
               />
             </div>
-            <div>
+            <div className={setupConfigLocked ? "locked-field" : ""}>
               <label>Warning Seconds</label>
               <input
                 type="number"
@@ -1461,7 +1676,7 @@ function App() {
                 }
               />
             </div>
-            <div>
+            <div className={setupConfigLocked ? "locked-field" : ""}>
               <label>Toss-up Seconds</label>
               <input
                 type="number"
@@ -1472,7 +1687,7 @@ function App() {
                 }
               />
             </div>
-            <div>
+            <div className={setupConfigLocked ? "locked-field" : ""}>
               <label>Follow-up Seconds</label>
               <input
                 type="number"
@@ -1492,9 +1707,13 @@ function App() {
           <p className="hint">
             Download template, fill rounds, then load. One round contains toss-up + toss-up answer + follow-up + follow-up answer.
           </p>
-          <div className="queue-actions setup-file-actions">
+          <div className={`queue-actions setup-file-actions ${setupConfigLocked ? "locked-actions" : ""}`}>
             <button onClick={downloadTemplate} disabled={setupConfigLocked}>Download Template</button>
-            <label className={`file-btn ${setupConfigLocked ? "disabled" : ""}`}>
+            <label
+              className={`file-btn ${!gameLoaded && !setupConfigLocked ? "file-btn-primary" : ""} ${
+                setupConfigLocked ? "disabled" : ""
+              }`}
+            >
               Load .tex
               <input
                 type="file"
@@ -1511,42 +1730,57 @@ function App() {
           <div className="setup-live-row">
             <button className="primary setup-live-btn" onClick={() => setActiveTab("live")}>Go To Live</button>
           </div>
+          <section className="panel setup-reset-panel">
+            <p className="section-title">Game Reset</p>
+            {bypassHolds ? (
+              <button
+                className="topbar-reset-btn"
+                onClick={() => send({ type: "game:reset" })}
+                disabled={!gameLoaded}
+              >
+                FULL RESET
+              </button>
+            ) : (
+              <button
+                className="reveal-hold reset-hold-btn"
+                onMouseDown={beginGameResetHold}
+                onMouseUp={cancelGameResetHold}
+                onMouseLeave={cancelGameResetHold}
+                onTouchStart={beginGameResetHold}
+                onTouchEnd={cancelGameResetHold}
+                onTouchCancel={cancelGameResetHold}
+                disabled={!gameLoaded}
+              >
+                <span className="hold-fill" style={{ transform: `scaleX(${gameResetHoldProgress})` }} />
+                <span className="hold-label">FULL RESET ({(gameResetHoldRemainingMs / 1000).toFixed(2)}s)</span>
+              </button>
+            )}
+            <p className="hint">Resets scores/timers/state to pregame. Loaded question file stays in memory.</p>
+          </section>
           {setupConfigLocked ? (
-            <p className="warning-inline">Game in progress: only team names can be updated. Use Full Reset in Live tab to unlock timer/setup and file changes.</p>
+            <p className="warning-inline">Game in progress: only team names can be updated. Use Full Reset in Setup tab to unlock timer/setup and file changes.</p>
           ) : null}
           <p className="ok-inline">{uploadedFileName ? `Loaded ${uploadedFileName} (${rounds.length} rounds).` : "No game file loaded."}</p>
           {uploadError ? <p className="warning-inline">{uploadError}</p> : null}
+          <section className="setup-testing-mode">
+            <label className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={state.testingMode}
+                onChange={(event) => send({ type: "testing-mode:set", enabled: event.target.checked })}
+              />
+              <span className="toggle-track" aria-hidden="true" />
+              <span className="toggle-copy">
+                <strong>Testing Mode</strong>
+                <small>Disable all hold delays</small>
+              </span>
+            </label>
+          </section>
         </section>
       )}
 
-      {showUploadModal && !gameLoaded ? (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal-card">
-            <h2>Load Game .tex Before Beginning</h2>
-            <p>
-              The game queue is round-based. Download the template, fill your rounds, and load the `.tex` file.
-            </p>
-            <div className="queue-actions">
-              <button onClick={downloadTemplate}>Download Template</button>
-              <label className="file-btn">
-                Load .tex
-                <input
-                  type="file"
-                  accept=".tex,text/plain"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) void handleTexFile(file);
-                    event.currentTarget.value = "";
-                  }}
-                />
-              </label>
-              <button onClick={() => setActiveTab("setup")}>Open Setup Tab</button>
-            </div>
-            {uploadError ? <p className="warning-inline">{uploadError}</p> : null}
-          </div>
-        </div>
-      ) : null}
-    </main>
+      </main>
+    </MathJaxContext>
   );
 }
 

@@ -57,6 +57,7 @@ export interface QuestionState {
 export interface AppState {
   phase: GamePhase;
   projectionOpen: boolean;
+  testingMode: boolean;
   leftTeam: TeamState;
   rightTeam: TeamState;
   config: PregameConfig;
@@ -86,6 +87,7 @@ export interface SetupPayload {
 
 export type AppCommand =
   | { type: "setup:apply"; payload: SetupPayload }
+  | { type: "testing-mode:set"; enabled: boolean }
   | { type: "round:toggle" }
   | { type: "game:reset" }
   | { type: "question:toggle-pause" }
