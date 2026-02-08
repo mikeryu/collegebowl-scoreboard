@@ -5,7 +5,7 @@ Electron app for running a live two-screen game:
 - Projection window (for audience)
 
 Download and try:
-- [macOS app (.zip)](./Scoreboard-0.1.0-mac-unsigned-arm64.zip)
+- [macOS app (.zip)](./Scoreboard-0.2.0-mac-unsigned-arm64.zip)
 - [sample game packet (.tex)](./scoreboard-sample-3-rounds.tex)
 
 ## For Regular Users
@@ -13,12 +13,12 @@ Download and try:
 ### 1) Download
 
 Download these files from the repository root:
-- `Scoreboard-0.1.0-mac-unsigned-arm64.zip`
+- `Scoreboard-0.2.0-mac-unsigned-arm64.zip`
 - `scoreboard-sample-3-rounds.tex` (optional sample question file)
 
 ### 2) Install and first launch (macOS)
 
-1. Unzip `Scoreboard-0.1.0-mac-unsigned-arm64.zip`.
+1. Unzip `Scoreboard-0.2.0-mac-unsigned-arm64.zip`.
 2. Move `Scoreboard.app` to `/Applications`.
 3. Open Terminal and run:
 
@@ -128,4 +128,4 @@ bun run package:mac:unsigned
 ```
 
 Output artifact:
-- `dist/mac-unsigned/Scoreboard-0.1.0-mac-unsigned-arm64.zip`
+- `dist/mac-unsigned/Scoreboard-0.2.0-mac-unsigned-arm64.zip`
