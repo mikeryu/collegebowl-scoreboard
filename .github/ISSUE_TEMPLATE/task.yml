@@ -1,0 +1,51 @@
+name: Planned task
+description: Define an actionable task and its verification before starting work.
+title: ""
+body:
+  - type: markdown
+    attributes:
+      value: |
+        After creating this issue, add it to the Project and populate Status, Sprint, Size, Estimate (hours), Priority, Next Action Date, Due Date, and Milestone. Create a linked branch for programming work. This form does not populate Project fields automatically.
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: Who needs this change, what happens now, and what should happen instead?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Describe this task's bounded change and any deliberate exclusions.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Use checkboxes for observable conditions that prove completion.
+      placeholder: "- [ ] Given ..., when ..., then ..."
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and implementation starting points
+      description: Link related or blocking issues and identify relevant source areas. Write None if there are no dependencies.
+    validations:
+      required: true
+  - type: textarea
+    id: next-action
+    attributes:
+      label: Next action
+      description: State the first concrete action, not just "work on this."
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification plan
+      description: Identify meaningful automated checks and any manual or visual checks.
+    validations:
+      required: true

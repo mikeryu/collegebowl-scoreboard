@@ -4,6 +4,18 @@ Electron app for running a live two-screen game:
 - Control window (for moderator/operator)
 - Projection window (for audience)
 
+## CS 195 repository and Project example
+
+This repository also demonstrates a complete capstone planning setup using its real backlog:
+
+- [Sprint 1 Kanban board](https://github.com/users/mikeryu/projects/4/views/1): six planned gameplay-hardening issues.
+- [All work and planning fields](https://github.com/users/mikeryu/projects/4/views/3): size, hours, priority, next action date, due date, sprint, and milestone.
+- [Release milestones](https://github.com/mikeryu/collegebowl-scoreboard/milestones): Alpha, Beta, and RC.
+- [Example walkthrough](docs/PROJECT-EXAMPLE.md): how to read and maintain the setup.
+- [Contribution workflow](CONTRIBUTING.md): issue → linked branch → checks → pull request.
+
+The board describes planned work, not features already delivered. The existing application and initial commits provide the programming artifact; no new gameplay implementation is claimed by this setup. Licensed under [MIT](LICENSE).
+
 Download and try:
 - [macOS app (.zip)](./Scoreboard-0.2.0-mac-unsigned-arm64.zip)
 - [sample game packet (.tex)](./scoreboard-sample-3-rounds.tex)
